@@ -322,16 +322,36 @@ let DB=[], TN={}, TS={};
 let filtered=[], sKey='asset_id', sDir='asc', page=1;
 const PER=50;
 
-fetch('./data/k403.json')
-  .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
-  .then(d=>{
-    DB=d.records; TN=d.type_names||{}; TS=d.type_summary||{};
-    init();
-    document.getElementById('loading').style.display='none';
-  })
-  .catch(e=>{
-    document.getElementById('loading').innerHTML=`<p style="color:#E74C3C;font-size:20px">❌ โหลดข้อมูลไม่ได้<br><small>${e}</small></p>`;
-  });
+// ลอง path หลายแบบ เพื่อรองรับทั้ง GitHub Pages และ local
+const ts = Date.now();
+const paths = [
+  `./data/k403.json?t=${ts}`,
+  `data/k403.json?t=${ts}`,
+  `/database_dashboard/data/k403.json?t=${ts}`
+];
+
+(async function loadData() {
+  for (const path of paths) {
+    try {
+      document.getElementById('loading').querySelector('p').textContent = `กำลังโหลด... (${path.split('?')[0]})`;
+      const r = await fetch(path);
+      if (!r.ok) continue;
+      const d = await r.json();
+      if (!d.records || !d.records.length) continue;
+      DB = d.records; TN = d.type_names||{}; TS = d.type_summary||{};
+      init();
+      document.getElementById('loading').style.display = 'none';
+      return;
+    } catch(e) { continue; }
+  }
+  document.getElementById('loading').innerHTML = `
+    <p style="color:#E74C3C;font-size:20px;text-align:center">
+      ❌ โหลดข้อมูลไม่ได้<br>
+      <small style="font-size:15px">กรุณาตรวจสอบว่าไฟล์ data/k403.json อยู่ใน repo<br>
+      หรือเปิดผ่าน local server (python -m http.server 8080)</small><br><br>
+      <button onclick="location.reload()" style="padding:10px 20px;border-radius:8px;border:none;background:#2E86C1;color:#fff;font-size:16px;cursor:pointer">🔄 ลองใหม่</button>
+    </p>`;
+})();
 
 function init(){
   document.getElementById('nav-total').textContent=`รวม ${DB.length.toLocaleString()} รายการ`;
@@ -510,21 +530,4 @@ function renderDept(){
     `<tr style="background:var(--primary-dark);color:#fff"><td colspan="2" style="font-weight:800;font-size:16px">รวม</td><td style="text-align:center;font-weight:800;font-size:16px">${src.length.toLocaleString()}</td><td colspan="2"></td></tr>`;
 }
 
-/* ===== CHARTS ===== */
-function buildCharts(){
-  const typeE=Object.entries(TS).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  new Chart(document.getElementById('ch-type'),{type:'bar',
-    data:{labels:typeE.map(([k])=>k),datasets:[{data:typeE.map(([,v])=>v),backgroundColor:'#2E86C1',borderRadius:5}]},
-    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},responsive:true}});
-
-  const ym={};
-  DB.filter(r=>r.year_be).forEach(r=>ym[r.year_be]=(ym[r.year_be]||0)+1);
-  const yE=Object.entries(ym).sort((a,b)=>a[0]-b[0]);
-  new Chart(document.getElementById('ch-year'),{type:'bar',
-    data:{labels:yE.map(([y])=>y),datasets:[{data:yE.map(([,v])=>v),backgroundColor:'#1E8449',borderRadius:4}]},
-    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},responsive:true}});
-
-  const bm={};
-  DB.filter(r=>r.brand).forEach(r=>{const b=r.brand.trim().toUpperCase();bm[b]=(bm[b]||0)+1;});
-  const bE=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  new Chart
+/* 
