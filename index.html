@@ -6,117 +6,115 @@
 <title>K403 Dashboard — ทะเบียนครุภัณฑ์การแพทย์</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  :root {
-    --primary: #1A5276; --primary-light: #2E86C1; --primary-dark: #154360;
-    --accent: #1E8449; --accent-light: #27AE60;
-    --warn: #E67E22; --danger: #C0392B;
-    --bg: #F4F6F7; --card: #FFFFFF; --border: #D5D8DC;
-    --text: #1C2833; --text-muted: #7F8C8D;
-    --shadow: 0 2px 8px rgba(0,0,0,0.10);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'TH SarabunPSK', 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 16px; }
+:root {
+  --primary:#1A5276; --primary-light:#2E86C1; --primary-dark:#154360;
+  --accent:#1E8449; --accent-light:#27AE60;
+  --warn:#E67E22; --danger:#C0392B;
+  --bg:#EBF5FB; --card:#fff; --border:#D5D8DC;
+  --text:#1C2833; --muted:#7F8C8D;
+  --sh:0 2px 10px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:17px;}
+body{font-family:'TH SarabunPSK','Segoe UI',Tahoma,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;}
 
-  /* NAV */
-  nav { background: var(--primary-dark); color: #fff; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
-  nav .brand { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
-  nav .brand span { color: #85C1E9; }
-  .nav-badge { background: var(--accent); color: #fff; border-radius: 12px; padding: 2px 10px; font-size: 13px; }
+/* NAV */
+nav{background:var(--primary-dark);color:#fff;padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:200;box-shadow:var(--sh);}
+.brand{font-size:22px;font-weight:800;letter-spacing:.3px;}
+.brand span{color:#85C1E9;}
+.nav-badge{background:var(--accent);color:#fff;border-radius:14px;padding:4px 14px;font-size:15px;font-weight:700;}
 
-  /* LAYOUT */
-  .container { max-width: 1400px; margin: 0 auto; padding: 20px 16px; }
+/* CONTAINER */
+.wrap{max-width:1500px;margin:0 auto;padding:22px 20px;}
 
-  /* KPI */
-  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
-  .kpi { background: var(--card); border-radius: 12px; padding: 18px 16px; text-align: center; box-shadow: var(--shadow); border-top: 4px solid var(--primary-light); }
-  .kpi.green { border-top-color: var(--accent-light); }
-  .kpi.orange { border-top-color: var(--warn); }
-  .kpi.red { border-top-color: var(--danger); }
-  .kpi-val { font-size: 30px; font-weight: 800; color: var(--primary); }
-  .kpi.green .kpi-val { color: var(--accent); }
-  .kpi.orange .kpi-val { color: var(--warn); }
-  .kpi.red .kpi-val { color: var(--danger); }
-  .kpi-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
+/* KPI */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px;}
+.kpi{background:var(--card);border-radius:14px;padding:20px 16px;text-align:center;box-shadow:var(--sh);border-top:5px solid var(--primary-light);}
+.kpi.g{border-top-color:var(--accent-light);} .kpi.r{border-top-color:var(--danger);} .kpi.o{border-top-color:var(--warn);}
+.kpi-v{font-size:34px;font-weight:900;color:var(--primary);}
+.kpi.g .kpi-v{color:var(--accent);} .kpi.r .kpi-v{color:var(--danger);} .kpi.o .kpi-v{color:var(--warn);}
+.kpi-l{font-size:14px;color:var(--muted);margin-top:4px;font-weight:600;}
 
-  /* CHARTS */
-  .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-  @media(max-width:900px){ .chart-grid { grid-template-columns: 1fr; } }
-  .card { background: var(--card); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); }
-  .card-title { font-size: 15px; font-weight: 700; color: var(--primary-dark); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:18px;border-bottom:3px solid var(--border);padding-bottom:0;}
+.tab{padding:10px 24px;cursor:pointer;border-radius:10px 10px 0 0;font-weight:700;font-size:16px;color:var(--muted);border:none;background:none;font-family:inherit;transition:.15s;}
+.tab.active{background:var(--primary);color:#fff;}
+.tab:hover:not(.active){background:#D6EAF8;color:var(--primary);}
+.tab-panel{display:none;} .tab-panel.active{display:block;}
 
-  /* FILTERS */
-  .filter-bar { background: var(--card); border-radius: 12px; padding: 16px 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
-  .filter-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
-  .filter-group { display: flex; flex-direction: column; gap: 4px; }
-  .filter-group label { font-size: 12px; color: var(--text-muted); font-weight: 600; }
-  .filter-group input, .filter-group select {
-    border: 1.5px solid var(--border); border-radius: 8px; padding: 7px 12px;
-    font-size: 14px; font-family: inherit; background: #fff; color: var(--text);
-    min-width: 160px; transition: border 0.2s;
-  }
-  .filter-group input:focus, .filter-group select:focus { outline: none; border-color: var(--primary-light); }
-  .filter-group input[type=text] { min-width: 220px; }
-  .btn { padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; font-family: inherit; transition: 0.2s; }
-  .btn-primary { background: var(--primary); color: #fff; }
-  .btn-primary:hover { background: var(--primary-light); }
-  .btn-reset { background: var(--bg); color: var(--text-muted); border: 1.5px solid var(--border); }
-  .btn-reset:hover { background: var(--border); }
+/* CHARTS */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px;}
+@media(max-width:900px){.chart-grid{grid-template-columns:1fr;}}
+.card{background:var(--card);border-radius:14px;padding:22px;box-shadow:var(--sh);}
+.card-title{font-size:17px;font-weight:800;color:var(--primary-dark);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
 
-  /* SORT BUTTONS */
-  .sort-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-  .sort-btn { padding: 5px 12px; border-radius: 6px; border: 1.5px solid var(--border); background: #fff; font-size: 13px; cursor: pointer; font-family: inherit; transition: 0.15s; }
-  .sort-btn:hover { border-color: var(--primary-light); color: var(--primary); }
-  .sort-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+/* FILTER BAR */
+.fbar{background:var(--card);border-radius:14px;padding:20px 22px;box-shadow:var(--sh);margin-bottom:16px;}
+.fbar-title{font-size:16px;font-weight:800;color:var(--primary-dark);margin-bottom:14px;}
+.frow{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;}
+.fg{display:flex;flex-direction:column;gap:5px;}
+.fg label{font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.3px;}
+.fg input,.fg select{border:2px solid var(--border);border-radius:9px;padding:9px 13px;font-size:15px;font-family:inherit;background:#fff;color:var(--text);transition:border .2s;min-width:170px;}
+.fg input[type=text]{min-width:240px;}
+.fg input:focus,.fg select:focus{outline:none;border-color:var(--primary-light);box-shadow:0 0 0 3px rgba(46,134,193,.15);}
+.btn{padding:10px 20px;border-radius:9px;border:none;cursor:pointer;font-size:15px;font-weight:700;font-family:inherit;transition:.2s;}
+.btn-reset{background:#EBF5FB;color:var(--primary);border:2px solid var(--primary-light);}
+.btn-reset:hover{background:var(--primary-light);color:#fff;}
 
-  /* TABLE */
-  .table-wrap { overflow-x: auto; border-radius: 12px; box-shadow: var(--shadow); }
-  .result-info { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-  .result-info strong { color: var(--primary); }
-  table { width: 100%; border-collapse: collapse; background: var(--card); font-size: 14px; }
-  thead th { background: var(--primary); color: #fff; padding: 10px 12px; text-align: left; white-space: nowrap; cursor: pointer; user-select: none; }
-  thead th:hover { background: var(--primary-light); }
-  thead th .sort-icon { margin-left: 4px; opacity: 0.6; }
-  tbody tr:nth-child(even) { background: #F8F9FA; }
-  tbody tr:hover { background: #EBF5FB; }
-  tbody td { padding: 8px 12px; border-bottom: 1px solid #ECF0F1; vertical-align: middle; }
-  .badge { display: inline-block; border-radius: 6px; padding: 2px 8px; font-size: 12px; font-weight: 700; }
-  .badge-type { background: #D6EAF8; color: var(--primary-dark); }
-  .badge-dept { background: #D5F5E3; color: #1E8449; }
-  .badge-sold { background: #FADBD8; color: var(--danger); }
-  .badge-ok { background: #D5F5E3; color: var(--accent); }
+/* SORT */
+.sort-row{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.sort-label{font-size:14px;color:var(--muted);font-weight:700;}
+.sb{padding:7px 15px;border-radius:8px;border:2px solid var(--border);background:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:.15s;color:var(--text);}
+.sb:hover{border-color:var(--primary-light);color:var(--primary);background:#EBF5FB;}
+.sb.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 
-  /* PAGINATION */
-  .pagination { display: flex; gap: 6px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
-  .page-btn { padding: 6px 12px; border-radius: 6px; border: 1.5px solid var(--border); background: #fff; cursor: pointer; font-size: 13px; font-family: inherit; transition: 0.15s; }
-  .page-btn:hover, .page-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+/* RESULT INFO */
+.rinfo{font-size:15px;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+.rinfo strong{color:var(--primary);font-size:16px;}
 
-  /* DEPT SUMMARY */
-  .dept-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .dept-table th { background: var(--primary-dark); color: #fff; padding: 7px 10px; text-align: left; }
-  .dept-table td { padding: 6px 10px; border-bottom: 1px solid #ECF0F1; }
-  .dept-table tr:nth-child(even) td { background: #F8F9FA; }
-  .bar-fill { height: 8px; border-radius: 4px; background: var(--primary-light); display: inline-block; }
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:14px;box-shadow:var(--sh);}
+table{width:100%;border-collapse:collapse;background:var(--card);font-size:15px;}
+thead th{background:var(--primary-dark);color:#fff;padding:12px 14px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;font-size:15px;font-weight:700;}
+thead th:hover{background:var(--primary-light);}
+tbody tr:nth-child(even){background:#F8FBFD;}
+tbody tr:hover{background:#D6EAF8;}
+tbody td{padding:10px 14px;border-bottom:1px solid #ECF0F1;vertical-align:middle;font-size:15px;}
+.badge{display:inline-block;border-radius:7px;padding:3px 10px;font-size:13px;font-weight:700;}
+.bt{background:#D6EAF8;color:var(--primary-dark);}
+.bd{background:#D5F5E3;color:#1E8449;}
+.bs{background:#FADBD8;color:var(--danger);}
+.bok{background:#D5F5E3;color:var(--accent);}
 
-  /* LOADING */
-  #loading { position: fixed; inset: 0; background: var(--primary-dark); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; gap: 16px; }
-  .spinner { width: 48px; height: 48px; border: 5px solid rgba(255,255,255,0.2); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading p { font-size: 18px; opacity: 0.85; }
+/* PAGINATION */
+.pag{display:flex;gap:7px;justify-content:center;margin-top:16px;flex-wrap:wrap;}
+.pb{padding:7px 14px;border-radius:8px;border:2px solid var(--border);background:#fff;cursor:pointer;font-size:14px;font-weight:600;font-family:inherit;transition:.15s;}
+.pb:hover,.pb.active{background:var(--primary);color:#fff;border-color:var(--primary);}
 
-  .section-title { font-size: 17px; font-weight: 700; color: var(--primary-dark); margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
-  .section-title::before { content: ''; display: block; width: 4px; height: 20px; background: var(--primary-light); border-radius: 2px; }
+/* DEPT TABLE */
+.dtbl{width:100%;border-collapse:collapse;font-size:15px;}
+.dtbl th{background:var(--primary-dark);color:#fff;padding:10px 14px;text-align:left;font-size:15px;}
+.dtbl td{padding:9px 14px;border-bottom:1px solid #ECF0F1;font-size:15px;}
+.dtbl tr:nth-child(even) td{background:#F8FBFD;}
+.bar{height:10px;border-radius:5px;background:var(--primary-light);display:inline-block;vertical-align:middle;}
 
-  .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
-  .tab { padding: 8px 18px; cursor: pointer; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 14px; color: var(--text-muted); border: none; background: none; font-family: inherit; transition: 0.15s; }
-  .tab.active { background: var(--primary); color: #fff; }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+/* LOADING */
+#loading{position:fixed;inset:0;background:var(--primary-dark);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:20px;}
+.spin{width:52px;height:52px;border:6px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg);}}
+#loading p{font-size:20px;opacity:.85;}
+
+.sec-title{font-size:18px;font-weight:800;color:var(--primary-dark);margin:22px 0 12px;display:flex;align-items:center;gap:8px;}
+.sec-title::before{content:'';display:block;width:5px;height:22px;background:var(--primary-light);border-radius:3px;}
+
+/* NO DATA */
+.nodata{text-align:center;padding:40px;color:var(--muted);font-size:17px;}
 </style>
 </head>
 <body>
 
 <div id="loading">
-  <div class="spinner"></div>
+  <div class="spin"></div>
   <p>กำลังโหลดฐานข้อมูล K403...</p>
 </div>
 
@@ -125,403 +123,376 @@
   <span class="nav-badge" id="nav-total">โหลด...</span>
 </nav>
 
-<div class="container">
+<div class="wrap">
 
-  <!-- KPI -->
-  <div class="kpi-grid" id="kpi-grid"></div>
+  <div class="kpi-row" id="kpi-row"></div>
 
-  <!-- TABS -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('overview')">📊 ภาพรวม</button>
-    <button class="tab" onclick="switchTab('data')">🔍 ค้นหา & ข้อมูล</button>
-    <button class="tab" onclick="switchTab('dept')">🏥 สรุปหน่วยงาน</button>
+    <button class="tab active" onclick="switchTab('overview',this)">📊 ภาพรวม & กราฟ</button>
+    <button class="tab" onclick="switchTab('data',this)">🔍 ค้นหา & กรองข้อมูล</button>
+    <button class="tab" onclick="switchTab('dept',this)">🏥 สรุปหน่วยงาน</button>
   </div>
 
-  <!-- TAB: OVERVIEW -->
+  <!-- ===== OVERVIEW ===== -->
   <div class="tab-panel active" id="tab-overview">
     <div class="chart-grid">
       <div class="card">
         <div class="card-title">📦 Top 15 ประเภทเครื่องมือ (จำนวนรายการ)</div>
-        <canvas id="chart-type" height="280"></canvas>
+        <canvas id="ch-type" height="260"></canvas>
       </div>
       <div class="card">
         <div class="card-title">📅 จำนวนตามปีที่ได้รับ (พ.ศ.)</div>
-        <canvas id="chart-year" height="280"></canvas>
+        <canvas id="ch-year" height="260"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">🏷️ Top 15 ยี่ห้อ</div>
-        <canvas id="chart-brand" height="280"></canvas>
+        <div class="card-title">🏷️ Top 15 ยี่ห้อ (จำนวนรายการ)</div>
+        <canvas id="ch-brand" height="260"></canvas>
       </div>
       <div class="card">
-        <div class="card-title">⚙️ สถานะทรัพย์สิน</div>
-        <canvas id="chart-status" height="280"></canvas>
+        <div class="card-title">⚙️ สัดส่วนสถานะทรัพย์สิน</div>
+        <canvas id="ch-status" height="260"></canvas>
       </div>
     </div>
   </div>
 
-  <!-- TAB: DATA -->
+  <!-- ===== DATA ===== -->
   <div class="tab-panel" id="tab-data">
-    <div class="filter-bar">
-      <div class="filter-row">
-        <div class="filter-group">
-          <label>🔍 ค้นหาชื่อเครื่องมือ / ยี่ห้อ</label>
-          <input type="text" id="f-search" placeholder="พิมพ์คำค้นหา..." oninput="applyFilters()">
+    <div class="fbar">
+      <div class="fbar-title">🎛️ ตัวกรองข้อมูล</div>
+      <div class="frow">
+        <div class="fg">
+          <label>🔍 ค้นหา ชื่อ / ยี่ห้อ / ID Number</label>
+          <input type="text" id="f-q" placeholder="พิมพ์คำค้นหา..." oninput="applyFilters()">
         </div>
-        <div class="filter-group">
+        <div class="fg">
           <label>📦 ประเภทเครื่องมือ</label>
-          <select id="f-type" onchange="applyFilters()"><option value="">-- ทั้งหมด --</option></select>
+          <select id="f-type" onchange="applyFilters()"><option value="">— ทั้งหมด —</option></select>
         </div>
-        <div class="filter-group">
-          <label>🏥 หน่วยงาน (ID)</label>
-          <select id="f-dept" onchange="applyFilters()"><option value="">-- ทั้งหมด --</option></select>
+        <div class="fg">
+          <label>🏥 หน่วยงาน</label>
+          <select id="f-dept" onchange="applyFilters()"><option value="">— ทั้งหมด —</option></select>
         </div>
-        <div class="filter-group">
-          <label>📅 ปี พ.ศ. (จาก)</label>
-          <select id="f-year-from" onchange="applyFilters()"><option value="">-- ทั้งหมด --</option></select>
+        <div class="fg">
+          <label>📅 ปี พ.ศ. จาก</label>
+          <select id="f-y1" onchange="applyFilters()"><option value="">— ทั้งหมด —</option></select>
         </div>
-        <div class="filter-group">
-          <label>📅 ปี พ.ศ. (ถึง)</label>
-          <select id="f-year-to" onchange="applyFilters()"><option value="">-- ทั้งหมด --</option></select>
+        <div class="fg">
+          <label>📅 ปี พ.ศ. ถึง</label>
+          <select id="f-y2" onchange="applyFilters()"><option value="">— ทั้งหมด —</option></select>
         </div>
-        <div class="filter-group">
+        <div class="fg">
           <label>🏷️ ยี่ห้อ</label>
-          <select id="f-brand" onchange="applyFilters()"><option value="">-- ทั้งหมด --</option></select>
+          <select id="f-brand" onchange="applyFilters()"><option value="">— ทั้งหมด —</option></select>
         </div>
-        <div class="filter-group">
+        <div class="fg">
           <label>⚙️ สถานะ</label>
           <select id="f-status" onchange="applyFilters()">
-            <option value="">-- ทั้งหมด --</option>
+            <option value="">— ทั้งหมด —</option>
             <option value="ok">ใช้งานปกติ</option>
-            <option value="sold">จำหน่ายแล้ว (-1)</option>
+            <option value="sold">จำหน่ายแล้ว</option>
           </select>
         </div>
-        <div class="filter-group" style="justify-content: flex-end;">
+        <div class="fg" style="justify-content:flex-end;">
           <label>&nbsp;</label>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-reset" onclick="resetFilters()">รีเซ็ต</button>
-          </div>
+          <button class="btn btn-reset" onclick="resetFilters()">🔄 รีเซ็ตทั้งหมด</button>
         </div>
       </div>
-      <div style="margin-top:10px;">
-        <div class="sort-btns">
-          <span style="font-size:13px;color:var(--text-muted);align-self:center;">เรียงตาม:</span>
-          <button class="sort-btn active" onclick="setSort('asset_id','asc')">ID ↑</button>
-          <button class="sort-btn" onclick="setSort('asset_id','desc')">ID ↓</button>
-          <button class="sort-btn" onclick="setSort('year_be','asc')">ปี เก่า→ใหม่</button>
-          <button class="sort-btn" onclick="setSort('year_be','desc')">ปี ใหม่→เก่า</button>
-          <button class="sort-btn" onclick="setSort('price','desc')">ราคา สูง→ต่ำ</button>
-          <button class="sort-btn" onclick="setSort('price','asc')">ราคา ต่ำ→สูง</button>
-          <button class="sort-btn" onclick="setSort('brand','asc')">ยี่ห้อ A→Z</button>
-          <button class="sort-btn" onclick="setSort('dept','asc')">หน่วยงาน A→Z</button>
-        </div>
+      <div class="sort-row">
+        <span class="sort-label">เรียงตาม :</span>
+        <button class="sb active" data-k="asset_id" data-d="asc"  onclick="setSort(this)">ID ↑ น้อย→มาก</button>
+        <button class="sb"        data-k="asset_id" data-d="desc" onclick="setSort(this)">ID ↓ มาก→น้อย</button>
+        <button class="sb"        data-k="year_be"  data-d="asc"  onclick="setSort(this)">📅 ปี เก่า→ใหม่</button>
+        <button class="sb"        data-k="year_be"  data-d="desc" onclick="setSort(this)">📅 ปี ใหม่→เก่า</button>
+        <button class="sb"        data-k="price"    data-d="desc" onclick="setSort(this)">💰 ราคา สูง→ต่ำ</button>
+        <button class="sb"        data-k="price"    data-d="asc"  onclick="setSort(this)">💰 ราคา ต่ำ→สูง</button>
+        <button class="sb"        data-k="brand"    data-d="asc"  onclick="setSort(this)">🏷️ ยี่ห้อ A→Z</button>
+        <button class="sb"        data-k="dept"     data-d="asc"  onclick="setSort(this)">🏥 หน่วยงาน A→Z</button>
       </div>
     </div>
 
-    <div class="result-info">
-      <div>แสดง <strong id="result-count">-</strong> รายการ จากทั้งหมด <strong id="result-total">-</strong> รายการ</div>
-      <div style="font-size:12px;color:var(--text-muted)">แสดง 50 รายการต่อหน้า</div>
+    <div class="rinfo">
+      <div>พบ <strong id="r-count">—</strong> รายการ จากทั้งหมด <strong id="r-total">—</strong> รายการ</div>
+      <div style="font-size:14px;color:var(--muted)">แสดง 50 รายการต่อหน้า</div>
     </div>
 
-    <div class="table-wrap">
+    <div class="tbl-wrap">
       <table>
         <thead>
           <tr>
-            <th onclick="setSort('asset_id','asc')">#<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('type','asc')">ประเภท<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('id_number','asc')">ID Number<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('krp_code','asc')">หมายเลขครุภัณฑ์<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('name','asc')">รายการทรัพย์สิน<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('brand','asc')">ยี่ห้อ<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('year_be','asc')">ปี พ.ศ.<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('price','desc')">ราคา (บาท)<span class="sort-icon">⇅</span></th>
-            <th onclick="setSort('dept','asc')">หน่วยงาน<span class="sort-icon">⇅</span></th>
+            <th>Asset ID</th>
+            <th>ประเภท</th>
+            <th>ID Number</th>
+            <th>หมายเลขครุภัณฑ์</th>
+            <th>รายการทรัพย์สิน</th>
+            <th>ยี่ห้อ</th>
+            <th>ปี พ.ศ.</th>
+            <th>ราคา (บาท)</th>
+            <th>หน่วยงาน</th>
             <th>สถานะ</th>
           </tr>
         </thead>
-        <tbody id="table-body"></tbody>
+        <tbody id="tbody"></tbody>
       </table>
     </div>
-    <div class="pagination" id="pagination"></div>
+    <div class="nodata" id="nodata" style="display:none">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</div>
+    <div class="pag" id="pag"></div>
   </div>
 
-  <!-- TAB: DEPT -->
+  <!-- ===== DEPT ===== -->
   <div class="tab-panel" id="tab-dept">
-    <div class="filter-bar">
-      <div class="filter-row">
-        <div class="filter-group">
-          <label>📦 กรองตามประเภท</label>
-          <select id="dept-type-filter" onchange="renderDeptTable()"><option value="">-- ทั้งหมด --</option></select>
+    <div class="fbar">
+      <div class="frow">
+        <div class="fg">
+          <label>📦 กรองตามประเภทเครื่องมือ</label>
+          <select id="dt-type" onchange="renderDept()"><option value="">— ทั้งหมด —</option></select>
         </div>
-        <div class="filter-group">
-          <label>🔍 ค้นหาหน่วยงาน</label>
-          <input type="text" id="dept-search" placeholder="พิมพ์ชื่อหน่วยงาน..." oninput="renderDeptTable()" style="min-width:180px">
+        <div class="fg">
+          <label>🔍 ค้นหาชื่อหน่วยงาน</label>
+          <input type="text" id="dt-q" placeholder="พิมพ์ชื่อหน่วยงาน..." oninput="renderDept()" style="min-width:200px">
         </div>
       </div>
     </div>
     <div class="card">
       <div class="card-title">🏥 สรุปจำนวนรายการตามหน่วยงาน</div>
-      <div style="overflow-x:auto">
-        <table class="dept-table" id="dept-table"></table>
-      </div>
+      <div style="overflow-x:auto"><table class="dtbl" id="dtbl"></table></div>
     </div>
   </div>
 
-</div><!-- /container -->
+</div><!-- /wrap -->
 
 <script>
-let DB = [], TYPE_NAMES = {}, TYPE_SUMMARY = {}, META = {};
-let filtered = [], sortKey = 'asset_id', sortDir = 'asc', currentPage = 1;
-const PAGE_SIZE = 50;
+let DB=[], TN={}, TS={};
+let filtered=[], sKey='asset_id', sDir='asc', page=1;
+const PER=50;
 
-// ===== LOAD DATA =====
 fetch('./data/k403.json')
-  .then(r => r.json())
-  .then(data => {
-    DB = data.records;
-    TYPE_NAMES = data.type_names;
-    TYPE_SUMMARY = data.type_summary;
-    META = data.meta;
+  .then(r=>{ if(!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d=>{
+    DB=d.records; TN=d.type_names||{}; TS=d.type_summary||{};
     init();
-    document.getElementById('loading').style.display = 'none';
+    document.getElementById('loading').style.display='none';
   })
-  .catch(e => {
-    document.getElementById('loading').innerHTML = '<p style="color:#E74C3C">❌ โหลดข้อมูลไม่ได้<br>กรุณาตรวจสอบไฟล์ data/k403.json</p>';
+  .catch(e=>{
+    document.getElementById('loading').innerHTML=`<p style="color:#E74C3C;font-size:20px">❌ โหลดข้อมูลไม่ได้<br><small>${e}</small></p>`;
   });
 
-function init() {
-  document.getElementById('nav-total').textContent = `รวม ${DB.length.toLocaleString()} รายการ`;
-  buildKPI();
-  buildFilters();
-  buildCharts();
-  filtered = [...DB];
-  renderTable();
-  renderDeptTable();
+function init(){
+  document.getElementById('nav-total').textContent=`รวม ${DB.length.toLocaleString()} รายการ`;
+  buildKPI(); buildFilters(); buildCharts();
+  filtered=[...DB]; renderTable(); renderDept();
 }
 
-// ===== KPI =====
-function buildKPI() {
-  const sold = DB.filter(r => r.status === -1).length;
-  const active = DB.filter(r => r.status !== -1).length;
-  const types = Object.keys(TYPE_SUMMARY).length;
-  const depts = new Set(DB.map(r=>r.dept).filter(Boolean)).size;
-  const brands = new Set(DB.map(r=>r.brand).filter(Boolean)).size;
-  const years = DB.filter(r=>r.year_be).map(r=>r.year_be);
-  const oldestYear = years.length ? Math.min(...years) : '-';
-  document.getElementById('kpi-grid').innerHTML = `
-    <div class="kpi"><div class="kpi-val">${DB.length.toLocaleString()}</div><div class="kpi-label">รายการทั้งหมด</div></div>
-    <div class="kpi green"><div class="kpi-val">${active.toLocaleString()}</div><div class="kpi-label">ใช้งานอยู่</div></div>
-    <div class="kpi red"><div class="kpi-val">${sold.toLocaleString()}</div><div class="kpi-label">จำหน่ายแล้ว</div></div>
-    <div class="kpi"><div class="kpi-val">${types}</div><div class="kpi-label">ประเภทเครื่องมือ</div></div>
-    <div class="kpi green"><div class="kpi-val">${depts}</div><div class="kpi-label">หน่วยงาน</div></div>
-    <div class="kpi orange"><div class="kpi-val">${brands}</div><div class="kpi-label">ยี่ห้อ</div></div>
-    <div class="kpi"><div class="kpi-val">${oldestYear}</div><div class="kpi-label">ปีเก่าสุด (พ.ศ.)</div></div>
-  `;
+/* ===== KPI ===== */
+function buildKPI(){
+  const sold=DB.filter(r=>r.status===-1).length;
+  const active=DB.length-sold;
+  const types=new Set(DB.map(r=>r.type)).size;
+  const depts=new Set(DB.map(r=>r.dept).filter(Boolean)).size;
+  const brands=new Set(DB.map(r=>r.brand).filter(Boolean)).size;
+  const yrs=DB.filter(r=>r.year_be).map(r=>r.year_be);
+  const oldest=yrs.length?Math.min(...yrs):'—';
+  const latest=yrs.length?Math.max(...yrs):'—';
+  document.getElementById('kpi-row').innerHTML=`
+    <div class="kpi"><div class="kpi-v">${DB.length.toLocaleString()}</div><div class="kpi-l">รายการทั้งหมด</div></div>
+    <div class="kpi g"><div class="kpi-v">${active.toLocaleString()}</div><div class="kpi-l">ใช้งานอยู่</div></div>
+    <div class="kpi r"><div class="kpi-v">${sold.toLocaleString()}</div><div class="kpi-l">จำหน่ายแล้ว</div></div>
+    <div class="kpi"><div class="kpi-v">${types}</div><div class="kpi-l">ประเภทเครื่องมือ</div></div>
+    <div class="kpi g"><div class="kpi-v">${depts}</div><div class="kpi-l">หน่วยงาน</div></div>
+    <div class="kpi o"><div class="kpi-v">${brands}</div><div class="kpi-l">ยี่ห้อ</div></div>
+    <div class="kpi"><div class="kpi-v">${oldest}</div><div class="kpi-l">ปีเก่าสุด (พ.ศ.)</div></div>
+    <div class="kpi"><div class="kpi-v">${latest}</div><div class="kpi-l">ปีล่าสุด (พ.ศ.)</div></div>`;
 }
 
-// ===== BUILD FILTERS =====
-function buildFilters() {
-  const types = Object.entries(TYPE_SUMMARY).sort((a,b)=>b[1]-a[1]);
-  const depts = [...new Set(DB.map(r=>r.dept).filter(Boolean))].sort();
-  const brands = [...new Set(DB.map(r=>r.brand).filter(Boolean))].sort();
-  const years = [...new Set(DB.map(r=>r.year_be).filter(Boolean))].sort((a,b)=>a-b);
+/* ===== BUILD FILTERS ===== */
+function buildFilters(){
+  const types=[...new Set(DB.map(r=>r.type))].sort();
+  const depts=[...new Set(DB.map(r=>r.dept).filter(Boolean))].sort();
+  const brands=[...new Set(DB.map(r=>r.brand).filter(Boolean))].sort();
+  const years=[...new Set(DB.map(r=>r.year_be).filter(Boolean))].sort((a,b)=>a-b);
 
-  const sel = (id, items, labelFn) => {
-    const el = document.getElementById(id);
-    items.forEach(v => { const o = document.createElement('option'); o.value=v; o.textContent=labelFn(v); el.appendChild(o); });
+  const fill=(id,items,fn)=>{
+    const el=document.getElementById(id);
+    items.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=fn(v);el.appendChild(o);});
   };
-  sel('f-type', types, ([k,n]) => `${k} — ${TYPE_NAMES[k]||k} (${n})`);
-  sel('f-dept', depts, v => v);
-  sel('f-brand', brands, v => v);
-  sel('f-year-from', years, v => `พ.ศ. ${v}`);
-  sel('f-year-to', years, v => `พ.ศ. ${v}`);
-
-  // Dept tab filter
-  const dtf = document.getElementById('dept-type-filter');
-  types.forEach(([k]) => { const o = document.createElement('option'); o.value=k; o.textContent=`${k} — ${TYPE_NAMES[k]||k}`; dtf.appendChild(o); });
+  fill('f-type',types,t=>`${t} — ${TN[t]||t} (${(TS[t]||0).toLocaleString()})`);
+  fill('f-dept',depts,v=>v);
+  fill('f-brand',brands,v=>v);
+  fill('f-y1',years,v=>`พ.ศ. ${v}`);
+  fill('f-y2',years,v=>`พ.ศ. ${v}`);
+  fill('dt-type',types,t=>`${t} — ${TN[t]||t}`);
 }
 
-// ===== FILTERS & SORT =====
-function applyFilters() {
-  const q = document.getElementById('f-search').value.trim().toLowerCase();
-  const fType = document.getElementById('f-type').value;
-  const fDept = document.getElementById('f-dept').value;
-  const fYearFrom = parseInt(document.getElementById('f-year-from').value)||0;
-  const fYearTo = parseInt(document.getElementById('f-year-to').value)||9999;
-  const fBrand = document.getElementById('f-brand').value;
-  const fStatus = document.getElementById('f-status').value;
+/* ===== FILTER ===== */
+function applyFilters(){
+  const q=document.getElementById('f-q').value.trim().toLowerCase();
+  const fT=document.getElementById('f-type').value;   // "FLO — ระบบก๊าซ... (885)"
+  const fD=document.getElementById('f-dept').value;
+  const fB=document.getElementById('f-brand').value;
+  const fY1=parseInt(document.getElementById('f-y1').value)||0;
+  const fY2=parseInt(document.getElementById('f-y2').value)||9999;
+  const fS=document.getElementById('f-status').value;
 
-  filtered = DB.filter(r => {
-    if (q && !r.name.toLowerCase().includes(q) && !r.brand.toLowerCase().includes(q) && !r.id_number.toLowerCase().includes(q)) return false;
-    if (fType && r.type !== fType.split(' —')[0]) return false;
-    if (fDept && r.dept !== fDept) return false;
-    if (fBrand && r.brand !== fBrand) return false;
-    if (fStatus === 'sold' && r.status !== -1) return false;
-    if (fStatus === 'ok' && r.status === -1) return false;
-    if (r.year_be) {
-      if (fYearFrom && r.year_be < fYearFrom) return false;
-      if (fYearTo < 9999 && r.year_be > fYearTo) return false;
+  // ดึงรหัสประเภทจาก value (ก่อน ' —')
+  const fType=fT ? fT.split(' —')[0].trim() : '';
+
+  filtered=DB.filter(r=>{
+    if(fType && r.type!==fType) return false;
+    if(fD && r.dept!==fD) return false;
+    if(fB && r.brand!==fB) return false;
+    if(fS==='sold' && r.status!==-1) return false;
+    if(fS==='ok'   && r.status===-1) return false;
+    if(r.year_be){
+      if(fY1 && r.year_be<fY1) return false;
+      if(fY2<9999 && r.year_be>fY2) return false;
+    }
+    if(q){
+      const hay=(r.name+' '+r.brand+' '+r.id_number+' '+r.krp_code).toLowerCase();
+      if(!hay.includes(q)) return false;
     }
     return true;
   });
-  currentPage = 1;
-  applySort();
+  page=1;
+  sortAndRender();
 }
 
-function setSort(key, dir) {
-  sortKey = key; sortDir = dir;
-  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  applySort();
+function resetFilters(){
+  ['f-q','f-type','f-dept','f-y1','f-y2','f-brand','f-status'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.tagName==='INPUT'?el.value='':el.selectedIndex=0;
+  });
+  filtered=[...DB]; page=1;
+  document.querySelectorAll('.sb').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.sb').classList.add('active');
+  sKey='asset_id'; sDir='asc';
+  sortAndRender();
 }
 
-function applySort() {
-  filtered.sort((a,b) => {
-    let av = a[sortKey]??'', bv = b[sortKey]??'';
-    if (typeof av === 'string') av = av.toLowerCase();
-    if (typeof bv === 'string') bv = bv.toLowerCase();
-    if (av < bv) return sortDir==='asc' ? -1 : 1;
-    if (av > bv) return sortDir==='asc' ? 1 : -1;
+/* ===== SORT ===== */
+function setSort(btn){
+  document.querySelectorAll('.sb').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  sKey=btn.dataset.k; sDir=btn.dataset.d;
+  page=1; sortAndRender();
+}
+
+function sortAndRender(){
+  filtered.sort((a,b)=>{
+    let av=a[sKey]??'', bv=b[sKey]??'';
+    if(typeof av==='string') av=av.toLowerCase();
+    if(typeof bv==='string') bv=bv.toLowerCase();
+    if(av<bv) return sDir==='asc'?-1:1;
+    if(av>bv) return sDir==='asc'?1:-1;
     return 0;
   });
   renderTable();
 }
 
-function resetFilters() {
-  ['f-search','f-type','f-dept','f-year-from','f-year-to','f-brand','f-status'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el.tagName==='INPUT') el.value=''; else el.value='';
-  });
-  filtered = [...DB];
-  sortKey='asset_id'; sortDir='asc';
-  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelector('.sort-btn').classList.add('active');
-  currentPage=1;
-  applySort();
-}
+/* ===== TABLE ===== */
+function renderTable(){
+  const total=filtered.length;
+  document.getElementById('r-count').textContent=total.toLocaleString();
+  document.getElementById('r-total').textContent=DB.length.toLocaleString();
+  const nodata=document.getElementById('nodata');
 
-// ===== TABLE =====
-function renderTable() {
-  const total = filtered.length;
-  const start = (currentPage-1)*PAGE_SIZE;
-  const page = filtered.slice(start, start+PAGE_SIZE);
+  if(total===0){
+    document.getElementById('tbody').innerHTML='';
+    nodata.style.display='block';
+    document.getElementById('pag').innerHTML='';
+    return;
+  }
+  nodata.style.display='none';
 
-  document.getElementById('result-count').textContent = total.toLocaleString();
-  document.getElementById('result-total').textContent = DB.length.toLocaleString();
+  const start=(page-1)*PER;
+  const chunk=filtered.slice(start,start+PER);
 
-  const tbody = document.getElementById('table-body');
-  tbody.innerHTML = page.map(r => `
+  document.getElementById('tbody').innerHTML=chunk.map(r=>`
     <tr>
       <td>${r.asset_id}</td>
-      <td><span class="badge badge-type">${r.type}</span></td>
-      <td style="font-size:12px">${r.id_number||'—'}</td>
-      <td style="font-size:12px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${r.krp_code}">${r.krp_code||'—'}</td>
-      <td style="max-width:280px" title="${r.name}">${r.name}</td>
+      <td><span class="badge bt">${r.type}</span></td>
+      <td style="font-size:13px;white-space:nowrap">${r.id_number||'—'}</td>
+      <td style="font-size:13px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.krp_code}">${r.krp_code||'—'}</td>
+      <td style="max-width:300px" title="${r.name}">${r.name}</td>
       <td>${r.brand||'—'}</td>
-      <td style="text-align:center">${r.year_be?`พ.ศ. ${r.year_be}`:'—'}</td>
-      <td style="text-align:right">${r.price>0?r.price.toLocaleString('th-TH',{minimumFractionDigits:0}):'—'}</td>
-      <td><span class="badge badge-dept">${r.dept||'—'}</span></td>
-      <td>${r.status===-1?'<span class="badge badge-sold">จำหน่าย</span>':'<span class="badge badge-ok">ปกติ</span>'}</td>
+      <td style="text-align:center;white-space:nowrap">${r.year_be?`พ.ศ. ${r.year_be}`:'—'}</td>
+      <td style="text-align:right;white-space:nowrap">${r.price>0?r.price.toLocaleString('th-TH'):'—'}</td>
+      <td><span class="badge bd">${r.dept||'—'}</span></td>
+      <td>${r.status===-1?'<span class="badge bs">จำหน่าย</span>':'<span class="badge bok">ปกติ</span>'}</td>
     </tr>`).join('');
 
-  renderPagination(total);
+  renderPag(total);
 }
 
-function renderPagination(total) {
-  const pages = Math.ceil(total/PAGE_SIZE);
-  const el = document.getElementById('pagination');
-  if (pages <= 1) { el.innerHTML=''; return; }
-  let html = '';
-  const range = 3;
-  for (let i=1; i<=pages; i++) {
-    if (i===1 || i===pages || (i>=currentPage-range && i<=currentPage+range)) {
-      html += `<button class="page-btn ${i===currentPage?'active':''}" onclick="goPage(${i})">${i}</button>`;
-    } else if (i===currentPage-range-1 || i===currentPage+range+1) {
-      html += `<span style="align-self:center;color:var(--text-muted)">…</span>`;
+function renderPag(total){
+  const pages=Math.ceil(total/PER);
+  if(pages<=1){document.getElementById('pag').innerHTML='';return;}
+  let h='';
+  for(let i=1;i<=pages;i++){
+    if(i===1||i===pages||(i>=page-3&&i<=page+3)){
+      h+=`<button class="pb ${i===page?'active':''}" onclick="goPage(${i})">${i}</button>`;
+    } else if(i===page-4||i===page+4){
+      h+=`<span style="align-self:center;color:var(--muted)">…</span>`;
     }
   }
-  el.innerHTML = html;
+  document.getElementById('pag').innerHTML=h;
 }
 
-function goPage(p) { currentPage=p; renderTable(); window.scrollTo({top:400,behavior:'smooth'}); }
+function goPage(p){page=p;renderTable();window.scrollTo({top:350,behavior:'smooth'});}
 
-// ===== DEPT TABLE =====
-function renderDeptTable() {
-  const typeFilter = document.getElementById('dept-type-filter').value;
-  const search = document.getElementById('dept-search').value.trim().toLowerCase();
-  const src = typeFilter ? DB.filter(r=>r.type===typeFilter) : DB;
-  const map = {};
-  src.forEach(r => { if(r.dept) map[r.dept]=(map[r.dept]||0)+1; });
-  const sorted = Object.entries(map).sort((a,b)=>b[1]-a[1]).filter(([k])=>!search||k.toLowerCase().includes(search));
-  const maxVal = Math.max(...sorted.map(([,v])=>v));
-  const tbl = document.getElementById('dept-table');
-  tbl.innerHTML = `<tr><th>ลำดับ</th><th>หน่วยงาน</th><th>จำนวน</th><th>สัดส่วน</th><th>กราฟ</th></tr>` +
-    sorted.map(([dept,cnt],i) => {
-      const pct = (cnt/src.length*100).toFixed(1);
-      const barW = Math.round(cnt/maxVal*120);
-      return `<tr><td style="text-align:center">${i+1}</td><td><strong>${dept}</strong></td><td style="text-align:center">${cnt.toLocaleString()}</td><td style="text-align:center">${pct}%</td><td><span class="bar-fill" style="width:${barW}px"></span></td></tr>`;
-    }).join('') +
-    `<tr style="background:var(--primary-dark);color:#fff"><td colspan="2"><strong>รวม</strong></td><td style="text-align:center"><strong>${src.length.toLocaleString()}</strong></td><td colspan="2"></td></tr>`;
+/* ===== DEPT TABLE ===== */
+function renderDept(){
+  const fT=document.getElementById('dt-type').value;
+  const q=document.getElementById('dt-q').value.trim().toLowerCase();
+  const src=fT?DB.filter(r=>r.type===fT):DB;
+  const map={};
+  src.forEach(r=>{ if(r.dept) map[r.dept]=(map[r.dept]||0)+1; });
+  let sorted=Object.entries(map).sort((a,b)=>b[1]-a[1]);
+  if(q) sorted=sorted.filter(([k])=>k.toLowerCase().includes(q));
+  const maxV=sorted.length?sorted[0][1]:1;
+  const tbl=document.getElementById('dtbl');
+  tbl.innerHTML=`<tr><th style="width:50px">ลำดับ</th><th>หน่วยงาน</th><th style="width:120px">จำนวน</th><th style="width:100px">สัดส่วน</th><th>กราฟ</th></tr>`+
+    sorted.map(([d,c],i)=>{
+      const pct=(c/src.length*100).toFixed(1);
+      const w=Math.round(c/maxV*150);
+      return `<tr><td style="text-align:center">${i+1}</td><td><strong>${d}</strong></td><td style="text-align:center">${c.toLocaleString()}</td><td style="text-align:center">${pct}%</td><td><span class="bar" style="width:${w}px"></span></td></tr>`;
+    }).join('')+
+    `<tr style="background:var(--primary-dark);color:#fff"><td colspan="2" style="font-weight:800;font-size:16px">รวม</td><td style="text-align:center;font-weight:800;font-size:16px">${src.length.toLocaleString()}</td><td colspan="2"></td></tr>`;
 }
 
-// ===== CHARTS =====
-function buildCharts() {
-  // Top 15 types
-  const typeEntries = Object.entries(TYPE_SUMMARY).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  new Chart(document.getElementById('chart-type'), {
-    type: 'bar',
-    data: {
-      labels: typeEntries.map(([k])=>k),
-      datasets: [{ data: typeEntries.map(([,v])=>v), backgroundColor: '#2E86C1', borderRadius: 4 }]
-    },
-    options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}, responsive:true }
-  });
+/* ===== CHARTS ===== */
+function buildCharts(){
+  const typeE=Object.entries(TS).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  new Chart(document.getElementById('ch-type'),{type:'bar',
+    data:{labels:typeE.map(([k])=>k),datasets:[{data:typeE.map(([,v])=>v),backgroundColor:'#2E86C1',borderRadius:5}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},responsive:true}});
 
-  // Year chart
-  const yearMap = {};
-  DB.filter(r=>r.year_be).forEach(r=>{ yearMap[r.year_be]=(yearMap[r.year_be]||0)+1; });
-  const yearEntries = Object.entries(yearMap).sort((a,b)=>a[0]-b[0]);
-  new Chart(document.getElementById('chart-year'), {
-    type: 'bar',
-    data: {
-      labels: yearEntries.map(([y])=>`${y}`),
-      datasets: [{ data: yearEntries.map(([,v])=>v), backgroundColor: '#1E8449', borderRadius: 3 }]
-    },
-    options: { plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}}, responsive:true }
-  });
+  const ym={};
+  DB.filter(r=>r.year_be).forEach(r=>ym[r.year_be]=(ym[r.year_be]||0)+1);
+  const yE=Object.entries(ym).sort((a,b)=>a[0]-b[0]);
+  new Chart(document.getElementById('ch-year'),{type:'bar',
+    data:{labels:yE.map(([y])=>y),datasets:[{data:yE.map(([,v])=>v),backgroundColor:'#1E8449',borderRadius:4}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}},responsive:true}});
 
-  // Brand chart
-  const brandMap = {};
-  DB.filter(r=>r.brand).forEach(r=>{ const b=r.brand.trim().toUpperCase(); brandMap[b]=(brandMap[b]||0)+1; });
-  const brandEntries = Object.entries(brandMap).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  new Chart(document.getElementById('chart-brand'), {
-    type: 'bar',
-    data: {
-      labels: brandEntries.map(([k])=>k.length>15?k.slice(0,15)+'…':k),
-      datasets: [{ data: brandEntries.map(([,v])=>v), backgroundColor: '#E67E22', borderRadius: 4 }]
-    },
-    options: { indexAxis:'y', plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}}, responsive:true }
-  });
+  const bm={};
+  DB.filter(r=>r.brand).forEach(r=>{const b=r.brand.trim().toUpperCase();bm[b]=(bm[b]||0)+1;});
+  const bE=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  new Chart(document.getElementById('ch-brand'),{type:'bar',
+    data:{labels:bE.map(([k])=>k.length>18?k.slice(0,18)+'…':k),datasets:[{data:bE.map(([,v])=>v),backgroundColor:'#E67E22',borderRadius:4}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}},responsive:true}});
 
-  // Status pie
-  const sold = DB.filter(r=>r.status===-1).length;
-  const active = DB.length - sold;
-  new Chart(document.getElementById('chart-status'), {
-    type: 'doughnut',
-    data: {
-      labels: ['ใช้งานปกติ','จำหน่ายแล้ว'],
-      datasets: [{ data: [active, sold], backgroundColor: ['#27AE60','#E74C3C'], borderWidth: 2 }]
-    },
-    options: { plugins:{ legend:{ position:'bottom' } }, responsive:true }
-  });
+  const sold=DB.filter(r=>r.status===-1).length;
+  new Chart(document.getElementById('ch-status'),{type:'doughnut',
+    data:{labels:['ใช้งานปกติ','จำหน่ายแล้ว'],datasets:[{data:[DB.length-sold,sold],backgroundColor:['#27AE60','#E74C3C'],borderWidth:3}]},
+    options:{plugins:{legend:{position:'bottom',labels:{font:{size:15}}}},responsive:true}});
 }
 
-// ===== TABS =====
-function switchTab(name) {
+/* ===== TABS ===== */
+function switchTab(name,btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  event.target.classList.add('active');
+  btn.classList.add('active');
   document.getElementById('tab-'+name).classList.add('active');
 }
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
