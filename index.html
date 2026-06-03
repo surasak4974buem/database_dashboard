@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>K403 Dashboard — ทะเบียนครุภัณฑ์การแพทย์</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
   --primary:#1A5276; --primary-light:#2E86C1; --primary-dark:#154360;
@@ -109,6 +110,32 @@ tbody td{padding:10px 14px;border-bottom:1px solid #ECF0F1;vertical-align:middle
 
 /* NO DATA */
 .nodata{text-align:center;padding:40px;color:var(--muted);font-size:17px;}
+
+/* EXPORT */
+.btn-export{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;transition:.2s;}
+.btn-export:hover{background:var(--accent-light);}
+.btn-pdf{background:var(--danger);color:#fff;border:none;border-radius:9px;padding:9px 18px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:7px;transition:.2s;}
+.btn-pdf:hover{background:#E74C3C;}
+.export-bar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.export-note{font-size:13px;color:var(--muted);}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;}
+.modal-bg.show{display:flex;}
+.modal{background:#fff;border-radius:16px;padding:30px 32px;min-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.2);}
+.modal h3{font-size:20px;font-weight:800;color:var(--primary-dark);margin-bottom:18px;}
+.modal-btns{display:flex;flex-direction:column;gap:12px;}
+.mbt{padding:13px 20px;border-radius:10px;border:none;cursor:pointer;font-size:16px;font-weight:700;font-family:inherit;display:flex;align-items:center;gap:10px;transition:.2s;}
+.mbt-xl{background:#1E6B22;color:#fff;} .mbt-xl:hover{background:var(--accent-light);}
+.mbt-pdf{background:var(--danger);color:#fff;} .mbt-pdf:hover{background:#E74C3C;}
+.mbt-cancel{background:#ECF0F1;color:var(--text);} .mbt-cancel:hover{background:#D5D8DC;}
+.modal-sub{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.6;}
+
+@media print{
+  nav,.tabs,.fbar,.export-bar,.pag,#nodata{display:none!important;}
+  .tbl-wrap{box-shadow:none;}
+  table{font-size:12px;}
+}
 </style>
 </head>
 <body>
@@ -210,6 +237,11 @@ tbody td{padding:10px 14px;border-bottom:1px solid #ECF0F1;vertical-align:middle
       </div>
     </div>
 
+    <div class="export-bar">
+      <button class="btn-export" onclick="showExportModal()">📥 Export ข้อมูล</button>
+      <span class="export-note" id="export-note">ส่งออกข้อมูลที่กรองอยู่ในขณะนี้</span>
+    </div>
+
     <div class="rinfo">
       <div>พบ <strong id="r-count">—</strong> รายการ จากทั้งหมด <strong id="r-total">—</strong> รายการ</div>
       <div style="font-size:14px;color:var(--muted)">แสดง 50 รายการต่อหน้า</div>
@@ -260,6 +292,31 @@ tbody td{padding:10px 14px;border-bottom:1px solid #ECF0F1;vertical-align:middle
 
 </div><!-- /wrap -->
 
+<!-- EXPORT MODAL -->
+<div class="modal-bg" id="export-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>📥 Export ข้อมูล</h3>
+    <div class="modal-btns">
+      <button class="mbt mbt-xl" onclick="exportExcel()">
+        <span style="font-size:22px">📊</span>
+        <div>
+          <div>Export เป็น Excel (.xlsx)</div>
+          <div style="font-size:13px;font-weight:400;opacity:.85">ข้อมูลที่กรองอยู่ทั้งหมด พร้อม header</div>
+        </div>
+      </button>
+      <button class="mbt mbt-pdf" onclick="exportPDF()">
+        <span style="font-size:22px">📄</span>
+        <div>
+          <div>Export เป็น PDF (พิมพ์หน้านี้)</div>
+          <div style="font-size:13px;font-weight:400;opacity:.85">เปิด print dialog — เลือก "Save as PDF"</div>
+        </div>
+      </button>
+      <button class="mbt mbt-cancel" onclick="closeModal()">✕ ยกเลิก</button>
+    </div>
+    <div class="modal-sub" id="modal-sub"></div>
+  </div>
+</div>
+
 <script>
 let DB=[], TN={}, TS={};
 let filtered=[], sKey='asset_id', sDir='asc', page=1;
@@ -289,18 +346,13 @@ function buildKPI(){
   const types=new Set(DB.map(r=>r.type)).size;
   const depts=new Set(DB.map(r=>r.dept).filter(Boolean)).size;
   const brands=new Set(DB.map(r=>r.brand).filter(Boolean)).size;
-  const yrs=DB.filter(r=>r.year_be).map(r=>r.year_be);
-  const oldest=yrs.length?Math.min(...yrs):'—';
-  const latest=yrs.length?Math.max(...yrs):'—';
   document.getElementById('kpi-row').innerHTML=`
     <div class="kpi"><div class="kpi-v">${DB.length.toLocaleString()}</div><div class="kpi-l">รายการทั้งหมด</div></div>
     <div class="kpi g"><div class="kpi-v">${active.toLocaleString()}</div><div class="kpi-l">ใช้งานอยู่</div></div>
     <div class="kpi r"><div class="kpi-v">${sold.toLocaleString()}</div><div class="kpi-l">จำหน่ายแล้ว</div></div>
     <div class="kpi"><div class="kpi-v">${types}</div><div class="kpi-l">ประเภทเครื่องมือ</div></div>
     <div class="kpi g"><div class="kpi-v">${depts}</div><div class="kpi-l">หน่วยงาน</div></div>
-    <div class="kpi o"><div class="kpi-v">${brands}</div><div class="kpi-l">ยี่ห้อ</div></div>
-    <div class="kpi"><div class="kpi-v">${oldest}</div><div class="kpi-l">ปีเก่าสุด (พ.ศ.)</div></div>
-    <div class="kpi"><div class="kpi-v">${latest}</div><div class="kpi-l">ปีล่าสุด (พ.ศ.)</div></div>`;
+    <div class="kpi o"><div class="kpi-v">${brands}</div><div class="kpi-l">ยี่ห้อ</div></div>`;
 }
 
 /* ===== BUILD FILTERS ===== */
@@ -475,24 +527,4 @@ function buildCharts(){
   const bm={};
   DB.filter(r=>r.brand).forEach(r=>{const b=r.brand.trim().toUpperCase();bm[b]=(bm[b]||0)+1;});
   const bE=Object.entries(bm).sort((a,b)=>b[1]-a[1]).slice(0,15);
-  new Chart(document.getElementById('ch-brand'),{type:'bar',
-    data:{labels:bE.map(([k])=>k.length>18?k.slice(0,18)+'…':k),datasets:[{data:bE.map(([,v])=>v),backgroundColor:'#E67E22',borderRadius:4}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true}},responsive:true}});
-
-  const sold=DB.filter(r=>r.status===-1).length;
-  new Chart(document.getElementById('ch-status'),{type:'doughnut',
-    data:{labels:['ใช้งานปกติ','จำหน่ายแล้ว'],datasets:[{data:[DB.length-sold,sold],backgroundColor:['#27AE60','#E74C3C'],borderWidth:3}]},
-    options:{plugins:{legend:{position:'bottom',labels:{font:{size:15}}}},responsive:true}});
-}
-
-/* ===== TABS ===== */
-function switchTab(name,btn){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-'+name).classList.add('active');
-}
-</script>
-</body>
-</html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+  new Chart
