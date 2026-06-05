@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Health Cam — ดูแลสุขภาพระหว่างทำงาน</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1632090166/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1620248257/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#0D1117; --card:#161B22; --border:#30363D;
+  --green:#00C853; --green-dim:#1B5E20;
+  --yellow:#FFB300; --red:#FF5252; --blue:#40C4FF;
+  --text:#E6EDF3; --muted:#8B949E;
+  --sh:0 4px 16px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{font-size:16px;}
+body{font-family:'TH SarabunPSK','Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* NAV */
+nav{background:#0A0E14;border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800;}
+.brand-icon{width:32px;height:32px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.brand span{color:var(--green);}
+.nav-right{display:flex;align-items:center;gap:12px;}
+#status-dot{width:10px;height:10px;border-radius:50%;background:var(--muted);transition:background .3s;}
+#status-dot.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+#status-text{font-size:14px;color:var(--muted);}
+.nav-btn{background:var(--card);border:1px solid var(--border);color:var(--text);padding:6px 16px;border-radius:8px;cursor:pointer;font-size:14px;font-family:inherit;transition:all .2s;}
+.nav-btn:hover{border-color:var(--green);color:var(--green);}
+.nav-btn.primary{background:var(--green);color:#000;border-color:var(--green);font-weight:700;}
+.nav-btn.primary:hover{background:#00E676;}
+.nav-btn.danger{background:var(--red);color:#fff;border-color:var(--red);}
+
+/* LAYOUT */
+.wrap{max-width:1400px;margin:0 auto;padding:20px 20px;}
+
+/* START SCREEN */
+#start-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:24px;text-align:center;}
+.start-icon{font-size:64px;margin-bottom:8px;}
+.start-title{font-size:32px;font-weight:800;color:var(--text);}
+.start-title span{color:var(--green);}
+.start-desc{font-size:17px;color:var(--muted);max-width:520px;line-height:1.7;}
+.start-features{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:8px 0;}
+.feature-chip{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:14px;color:var(--muted);}
+.feature-chip span{margin-right:6px;}
+.disclaimer{background:#1A1200;border:1px solid #5D4037;border-radius:10px;padding:14px 20px;font-size:14px;color:#FFB74D;max-width:520px;line-height:1.6;}
+.start-btn{background:var(--green);color:#000;border:none;padding:14px 40px;border-radius:12px;font-size:19px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 4px 20px rgba(0,200,83,.3);}
+.start-btn:hover{background:#00E676;transform:translateY(-2px);}
+
+/* MAIN LAYOUT */
+#app{display:none;}
+.main-grid{display:grid;grid-template-columns:640px 1fr;gap:20px;align-items:start;}
+
+/* VIDEO */
+.video-container{position:relative;border-radius:16px;overflow:hidden;background:#000;box-shadow:var(--sh);}
+#output-canvas{width:100%;display:block;}
+video{display:none;}
+.video-overlay{position:absolute;top:10px;left:10px;display:flex;flex-direction:column;gap:6px;}
+.vid-badge{background:rgba(0,0,0,.7);border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:13px;backdrop-filter:blur(4px);}
+.vid-badge.green{border-color:var(--green);color:var(--green);}
+.vid-badge.red{border-color:var(--red);color:var(--red);}
+.video-bottom{position:absolute;bottom:10px;left:10px;right:10px;background:rgba(0,0,0,.7);border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;font-size:13px;color:var(--muted);backdrop-filter:blur(4px);}
+
+/* METRICS */
+.metrics-col{display:flex;flex-direction:column;gap:14px;}
+.metric-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.metric-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.metric-label{font-size:13px;color:var(--muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+.metric-icon{font-size:20px;}
+.metric-value{font-size:34px;font-weight:800;line-height:1;letter-spacing:-1px;}
+.metric-unit{font-size:14px;color:var(--muted);font-weight:400;}
+.metric-sub{font-size:13px;color:var(--muted);margin-top:4px;}
+.metric-bar{height:4px;background:#21262D;border-radius:2px;margin-top:10px;overflow:hidden;}
+.metric-bar-fill{height:100%;border-radius:2px;transition:width .5s;}
+
+/* Status colors */
+.good{color:var(--green);}
+.warn{color:var(--yellow);}
+.danger{color:var(--red);}
+.info{color:var(--blue);}
+.neutral{color:var(--muted);}
+
+/* Metric grid for smaller cards */
+.metric-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.metric-mini{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.mini-label{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.mini-value{font-size:20px;font-weight:800;}
+.mini-sub{font-size:12px;color:var(--muted);}
+
+/* ALERTS */
+#alert-banner{position:fixed;top:70px;right:20px;z-index:400;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.alert-item{background:#0A0E14;border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-size:16px;display:flex;align-items:center;gap:10px;box-shadow:var(--sh);animation:slideIn .3s ease;pointer-events:auto;min-width:280px;}
+.alert-item.drowsy{border-color:var(--yellow);background:#1A1200;}
+.alert-item.stand{border-color:var(--blue);background:#001A2E;}
+.alert-item.water{border-color:var(--blue);background:#001A2E;}
+.alert-item.posture{border-color:var(--red);background:#1A0000;}
+.alert-item.stress{border-color:var(--yellow);background:#1A1200;}
+.alert-close{margin-left:auto;cursor:pointer;color:var(--muted);font-size:18px;}
+
+/* CHART SECTION */
+.chart-section{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.chart-title{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+.chart-wrap{height:140px;position:relative;}
+
+/* ALERT LOG */
+.log-section{margin-top:16px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;}
+.log-title{font-size:14px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;}
+#alert-log{display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;}
+.log-entry{font-size:14px;color:var(--muted);display:flex;gap:10px;}
+.log-time{color:var(--border);min-width:60px;}
+.log-empty{font-size:14px;color:var(--border);text-align:center;padding:20px;}
+
+/* SETTINGS PANEL */
+.settings-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;}
+.settings-title{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px;}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);}
+.setting-row:last-child{border-bottom:none;}
+.setting-label{font-size:14px;color:var(--text);}
+.setting-val{font-size:13px;color:var(--green);font-weight:700;}
+.setting-input{background:#21262D;border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font-size:13px;width:80px;text-align:center;}
+.setting-toggle{width:36px;height:20px;background:#21262D;border-radius:10px;cursor:pointer;border:1px solid var(--border);position:relative;transition:background .2s;}
+.setting-toggle.on{background:var(--green-dim);border-color:var(--green);}
+.setting-toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:all .2s;}
+.setting-toggle.on::after{left:18px;background:var(--green);}
+
+/* TIMER DISPLAYS */
+.timer-row{display:flex;gap:10px;margin-top:6px;}
+.timer-block{flex:1;background:#21262D;border-radius:8px;padding:8px;text-align:center;}
+.timer-num{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;}
+.timer-label{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ANIMATIONS */
+@keyframes pulse{0%,100%{box-shadow:0 0 6px var(--green);}50%{box-shadow:0 0 14px var(--green);}}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+@keyframes fadeOut{from{opacity:1;}to{opacity:0;transform:translateX(40px);}}
+
+/* LOADING */
+#loading-overlay{position:fixed;inset:0;background:rgba(13,17,23,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:20px;}
+.loader{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loader-text{font-size:16px;color:var(--muted);}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .main-grid{grid-template-columns:1fr;}
+  .chart-section{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading-overlay" style="display:none;">
+  <div class="loader"></div>
+  <div class="loader-text">กำลังโหลด AI Engine...</div>
+</div>
+
+<!-- Alert banner -->
+<div id="alert-banner"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="brand">
+    <div class="brand-icon">❤</div>
+    <div>AI Health <span>Cam</span></div>
+  </div>
+  <div class="nav-right">
+    <div id="status-dot"></div>
+    <div id="status-text">หยุดทำงาน</div>
+    <button class="nav-btn" id="settings-btn" onclick="toggleSettings()">ตั้งค่า</button>
+    <button class="nav-btn primary" id="main-btn" onclick="toggleCamera()">เริ่มใช้งาน</button>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- Start screen -->
+<div id="start-screen">
+  <div>
+    <div class="start-icon">🏥</div>
+    <div class="start-title">AI Health <span>Cam</span></div>
+  </div>
+  <div class="start-desc">
+    ระบบดูแลสุขภาพเบื้องต้นระหว่างทำงานหน้าคอมพิวเตอร์<br>
+    ใช้กล้องเว็บแคม ประมวลผลบนเครื่อง ไม่บันทึกวิดีโอ
+  </div>
+  <div class="start-features">
+    <div class="feature-chip"><span>❤️</span>อัตราการเต้นของหัวใจ</div>
+    <div class="feature-chip"><span>🧠</span>ความเครียด HRV</div>
+    <div class="feature-chip"><span>👁️</span>การกระพริบตา</div>
+    <div class="feature-chip"><span>😴</span>อาการง่วง</div>
+    <div class="feature-chip"><span>🪑</span>ท่านั่ง</div>
+    <div class="feature-chip"><span>💧</span>เตือนดื่มน้ำ</div>
+    <div class="feature-chip"><span>🔔</span>เสียงเตือนภาษาไทย</div>
+  </div>
+  <div class="disclaimer">
+    ⚠️ ระบบนี้ไม่ใช่อุปกรณ์ทางการแพทย์ และไม่ใช่เครื่องมือวินิจฉัยโรค
+    เป็นโปรเจกต์ทดลองเพื่อการเรียนรู้ ใช้ช่วยเตือนพฤติกรรมระหว่างทำงานเท่านั้น
+  </div>
+  <button class="start-btn" onclick="toggleCamera()">เริ่มใช้งาน</button>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- Video column -->
+    <div>
+      <div class="video-container">
+        <video id="video" playsinline></video>
+        <canvas id="output-canvas" width="640" height="480"></canvas>
+        <div class="video-overlay">
+          <div class="vid-badge green" id="face-badge" style="display:none">ตรวจพบใบหน้า</div>
+          <div class="vid-badge red" id="noface-badge" style="display:none">ไม่พบใบหน้า</div>
+        </div>
+        <div class="video-bottom">
+          <span id="fps-display">0 FPS</span>
+          <span>ประมวลผลบนเครื่อง — ไม่บันทึกวิดีโอ</span>
+          <span id="time-display">00:00:00</span>
+        </div>
+      </div>
+
+      <!-- Settings panel (hidden by default) -->
+      <div class="settings-panel" id="settings-panel" style="display:none">
+        <div class="settings-title">ตั้งค่าการแจ้งเตือน</div>
+        <div class="setting-row">
+          <div class="setting-label">เตือนนั่งนาน (นาที)</div>
+          <input class="setting-input" type="number" id="sit-limit" value="45" min="10" max="120">
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">เตือนดื่มน้ำ (นาที)</div>
+          <input class="setting-input" type="number" id="water-limit" value="30" min="10" max="90">
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">เตือนอาการง่วง</div>
+          <div class="setting-toggle on" id="toggle-drowsy" onclick="toggleOpt('drowsy')"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">เตือนท่านั่งไม่ดี</div>
+          <div class="setting-toggle on" id="toggle-posture" onclick="toggleOpt('posture')"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">เสียงเตือนภาษาไทย</div>
+          <div class="setting-toggle on" id="toggle-voice" onclick="toggleOpt('voice')"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">แสดงจุด Landmark</div>
+          <div class="setting-toggle" id="toggle-landmarks" onclick="toggleOpt('landmarks')"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics column -->
+    <div class="metrics-col">
+
+      <!-- Heart Rate -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-label">อัตราการเต้นของหัวใจ (rPPG)</div>
+          <div class="metric-icon">❤️</div>
+        </div>
+        <div class="metric-value" id="hr-val"><span class="neutral">--</span></div>
+        <div class="metric-unit">BPM</div>
+        <div class="metric-sub" id="hr-sub">กำลังวิเคราะห์ (ต้องการ ~15 วินาที)</div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="hr-bar" style="width:50%;background:var(--green);"></div></div>
+      </div>
+
+      <!-- Stress/HRV -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-label">ระดับความเครียด (HRV)</div>
+          <div class="metric-icon">🧠</div>
+        </div>
+        <div class="metric-value" id="stress-val"><span class="neutral">--</span></div>
+        <div class="metric-sub" id="stress-sub">รอข้อมูล HRV</div>
+        <div class="metric-bar"><div class="metric-bar-fill" id="stress-bar" style="width:30%;background:var(--green);"></div></div>
+      </div>
+
+      <!-- Blink + Drowsiness -->
+      <div class="metric-mini-grid">
+        <div class="metric-mini">
+          <div class="mini-label">👁️ การกระพริบตา</div>
+          <div class="mini-value neutral" id="blink-val">--</div>
+          <div class="mini-sub">ครั้ง/นาที</div>
+        </div>
+        <div class="metric-mini">
+          <div class="mini-label">😴 ความง่วง</div>
+          <div class="mini-value neutral" id="drowsy-val">--</div>
+          <div class="mini-sub" id="perclos-sub">PERCLOS: --%</div>
+        </div>
+      </div>
+
+      <!-- Posture -->
+      <div class="metric-mini-grid">
+        <div class="metric-mini">
+          <div class="mini-label">🪑 ท่านั่ง</div>
+          <div class="mini-value neutral" id="posture-val">--</div>
+          <div class="mini-sub" id="posture-sub">รอการตรวจจับ</div>
+        </div>
+        <div class="metric-mini">
+          <div class="mini-label">🎯 EAR</div>
+          <div class="mini-value neutral" id="ear-val">--</div>
+          <div class="mini-sub">ค่าความเปิดตา</div>
+        </div>
+      </div>
+
+      <!-- Sitting Timer -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-label">เวลาที่นั่งทำงาน</div>
+          <div class="metric-icon">⏱️</div>
+        </div>
+        <div class="timer-row">
+          <div class="timer-block">
+            <div class="timer-num good" id="sit-h">00</div>
+            <div class="timer-label">ชั่วโมง</div>
+          </div>
+          <div class="timer-block">
+            <div class="timer-num good" id="sit-m">00</div>
+            <div class="timer-label">นาที</div>
+          </div>
+          <div class="timer-block">
+            <div class="timer-num good" id="sit-s">00</div>
+            <div class="timer-label">วินาที</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <div class="metric-bar"><div class="metric-bar-fill" id="sit-bar" style="width:0%;background:var(--green);"></div></div>
+          <div class="metric-sub" id="sit-sub" style="margin-top:4px;">เตือนเมื่อนั่งครบ <span id="sit-limit-disp">45</span> นาที</div>
+        </div>
+      </div>
+
+      <!-- Water Reminder -->
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-label">เตือนดื่มน้ำ</div>
+          <div class="metric-icon">💧</div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div class="metric-value info" id="water-val">--:--</div>
+            <div class="metric-sub">ตั้งแต่ดื่มน้ำครั้งล่าสุด</div>
+          </div>
+          <button class="nav-btn" onclick="resetWater()" style="font-size:14px;">ดื่มน้ำแล้ว ✓</button>
+        </div>
+        <div class="metric-bar" style="margin-top:10px;"><div class="metric-bar-fill" id="water-bar" style="width:0%;background:var(--blue);"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="chart-section">
+    <div class="chart-card">
+      <div class="chart-title">แนวโน้มอัตราการเต้นหัวใจ</div>
+      <div class="chart-wrap"><canvas id="hr-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">แนวโน้มการกระพริบตา</div>
+      <div class="chart-wrap"><canvas id="blink-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Alert Log -->
+  <div class="log-section">
+    <div class="log-title">
+      <span>ประวัติการแจ้งเตือน</span>
+      <button class="nav-btn" onclick="clearLog()" style="font-size:13px;padding:3px 10px;">ล้าง</button>
+    </div>
+    <div id="alert-log">
+      <div class="log-empty">ยังไม่มีการแจ้งเตือน</div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+</div><!-- /wrap -->
+
+<script>
+// ==================== STATE ====================
+const S = {
+  running: false,
+  faceDetected: false,
+  startTime: null,
+  lastWater: null,
+  lastStand: null,
+  frameCount: 0,
+  lastFpsTime: Date.now(),
+  fps: 0
+};
+
+const OPT = {
+  drowsy: true,
+  posture: true,
+  voice: true,
+  landmarks: false,
+  sitLimit: 45,
+  waterLimit: 30
+};
+
+// Alert cooldowns (ms)
+const COOLDOWN = {
+  drowsy: 0, stand: 0, water: 0, posture: 0, stress: 0,
+  noface: 0
+};
+const COOLDOWN_MS = 90000; // 90 sec between same alerts
+
+// ==================== rPPG ENGINE ====================
+const RPPG = {
+  buffer: [],
+  maxBuf: 600,  // 20 sec at ~30fps
+  bpmHistory: [],
+  lastCalc: 0,
+  calcInterval: 3000,
+  currentBPM: null,
+  currentHRV: null,
+
+  addSample(g) {
+    this.buffer.push({ g, t: Date.now() });
+    if (this.buffer.length > this.maxBuf) this.buffer.shift();
+  },
+
+  compute() {
+    if (this.buffer.length < 150) return;
+    const sig = this.buffer.map(s => s.g);
+    const times = this.buffer.map(s => s.t);
+    const dur = (times[times.length - 1] - times[0]) / 1000;
+    if (dur < 4) return;
+    const fps = sig.length / dur;
+
+    // Remove DC
+    const mean = sig.reduce((a, b) => a + b) / sig.length;
+    const centered = sig.map(x => x - mean);
+
+    // Normalize
+    const maxAbs = Math.max(...centered.map(Math.abs)) || 1;
+    const norm = centered.map(x => x / maxAbs);
+
+    // DFT in BPM range 40-180
+    const N = norm.length;
+    const minK = Math.max(1, Math.floor(40 / 60 * N / fps));
+    const maxK = Math.min(N / 2 - 1, Math.ceil(200 / 60 * N / fps));
+
+    let maxP = 0, peakK = minK;
+    for (let k = minK; k <= maxK; k++) {
+      let re = 0, im = 0;
+      for (let n = 0; n < N; n++) {
+        const a = 2 * Math.PI * k * n / N;
+        re += norm[n] * Math.cos(a);
+        im -= norm[n] * Math.sin(a);
+      }
+      const p = re * re + im * im;
+      if (p > maxP) { maxP = p; peakK = k; }
+    }
+
+    const bpm = (peakK * fps / N) * 60;
+    if (bpm < 42 || bpm > 200) return;
+
+    this.bpmHistory.push(bpm);
+    if (this.bpmHistory.length > 20) this.bpmHistory.shift();
+
+    const smoothed = this.bpmHistory.reduce((a, b) => a + b) / this.bpmHistory.length;
+    this.currentBPM = Math.round(smoothed);
+
+    // HRV: std dev of recent BPM
+    if (this.bpmHistory.length >= 5) {
+      const m = this.bpmHistory.reduce((a, b) => a + b) / this.bpmHistory.length;
+      const sd = Math.sqrt(this.bpmHistory.reduce((a, b) => a + (b - m) ** 2, 0) / this.bpmHistory.length);
+      this.currentHRV = sd;
+    }
+  },
+
+  getStress() {
+    if (this.currentHRV === null) return null;
+    if (this.currentHRV > 6) return { level: 'ต่ำ', cls: 'good', val: 20 };
+    if (this.currentHRV > 3) return { level: 'ปานกลาง', cls: 'warn', val: 55 };
+    return { level: 'สูง', cls: 'danger', val: 85 };
+  }
+};
+
+// ==================== BLINK DETECTOR ====================
+const BLINK = {
+  EAR_THRESH: 0.22,
+  earHistory: [],
+  blinkTs: [],
+  blinking: false,
+  blinkFrames: 0,
+  total: 0,
+  rate: 0,
+
+  update(ear) {
+    const now = Date.now();
+    this.earHistory.push({ ear, t: now });
+    // Keep 60s window
+    const cut = now - 60000;
+    this.blinkTs = this.blinkTs.filter(t => t > cut);
+    this.earHistory = this.earHistory.filter(h => h.t > cut);
+
+    if (ear < this.EAR_THRESH) {
+      if (!this.blinking) {
+        this.blinking = true;
+        this.blinkFrames = 1;
+      } else {
+        this.blinkFrames++;
+      }
+    } else {
+      if (this.blinking && this.blinkFrames >= 2) {
+        this.total++;
+        this.blinkTs.push(now);
+      }
+      this.blinking = false;
+      this.blinkFrames = 0;
+    }
+    this.rate = this.blinkTs.length;
+  }
+};
+
+// ==================== DROWSINESS ====================
+const DROWSY = {
+  earHistory: [],
+  score: 0,
+  level: 'alert',
+
+  update(ear, blinkRate) {
+    const now = Date.now();
+    this.earHistory.push({ ear, t: now });
+    const cut = now - 30000;
+    this.earHistory = this.earHistory.filter(h => h.t > cut);
+
+    const closed = this.earHistory.filter(h => h.ear < 0.22).length;
+    const perclos = closed / Math.max(this.earHistory.length, 1);
+
+    let score = perclos * 200;
+    if (blinkRate < 5) score += 25;
+    else if (blinkRate > 35) score += 15;
+
+    this.score = Math.min(100, score);
+    this.perclos = perclos;
+
+    if (this.score < 20) this.level = 'alert';
+    else if (this.score < 50) this.level = 'tired';
+    else this.level = 'drowsy';
+  }
+};
+
+// ==================== POSTURE ====================
+const POSTURE = {
+  status: 'good',
+  eyeAngle: 0,
+  headRatio: 0,
+  issues: [],
+
+  analyze(lm, w, h) {
+    const p = (i) => ({ x: lm[i].x * w, y: lm[i].y * h });
+    const nose = p(1), chin = p(152);
+    const leftEar = p(234), rightEar = p(454);
+    const leftEye = p(159), rightEye = p(386);
+
+    const eyeAngle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x) * 180 / Math.PI;
+    const faceW = Math.abs(rightEar.x - leftEar.x);
+    const faceSz = faceW / w;
+    const eyeCy = (leftEye.y + rightEye.y) / 2;
+    const headPos = eyeCy / h;
+
+    this.eyeAngle = eyeAngle;
+    this.headRatio = headPos;
+
+    const issues = [];
+    if (Math.abs(eyeAngle) > 15) issues.push('เอียงศีรษะ');
+    if (headPos > 0.65) issues.push('ก้มหน้ามาก');
+    if (faceSz < 0.12) issues.push('อยู่ห่างกล้องมาก');
+
+    this.issues = issues;
+    if (issues.length === 0) this.status = 'good';
+    else if (issues.length === 1) this.status = 'fair';
+    else this.status = 'poor';
+  }
+};
+
+// ==================== EYES LANDMARK INDICES ====================
+// Right eye EAR: [33, 160, 158, 133, 153, 144]
+// Left eye EAR:  [362, 385, 387, 263, 373, 380]
+const R_EYE = [33, 160, 158, 133, 153, 144];
+const L_EYE = [362, 385, 387, 263, 373, 380];
+
+function dist(a, b) {
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+function calcEAR(lm, idx) {
+  const [p1, p2, p3, p4, p5, p6] = idx.map(i => lm[i]);
+  return (dist(p2, p6) + dist(p3, p5)) / (2 * dist(p1, p4));
+}
+
+// ==================== GREEN CHANNEL EXTRACTION ====================
+function extractGreen(canvas, ctx, lm) {
+  const w = canvas.width, h = canvas.height;
+  // Forehead region estimate: midpoint between eyes → top of landmarks
+  const xCoords = lm.map(l => l.x * w);
+  const yCoords = lm.map(l => l.y * h);
+  const minX = Math.min(...xCoords), maxX = Math.max(...xCoords);
+  const minY = Math.min(...yCoords), maxY = Math.max(...yCoords);
+
+  // Central 40% of face bounding box (reduce background)
+  const rX = Math.round(minX + (maxX - minX) * 0.3);
+  const rY = Math.round(minY + (maxY - minY) * 0.05);
+  const rW = Math.round((maxX - minX) * 0.4);
+  const rH = Math.round((maxY - minY) * 0.5);
+
+  if (rW < 10 || rH < 10) return null;
+
+  try {
+    const imgData = ctx.getImageData(rX, rY, rW, rH);
+    const d = imgData.data;
+    let sum = 0, cnt = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const bright = (d[i] + d[i + 1] + d[i + 2]) / 3;
+      if (bright > 40 && bright < 220) {
+        sum += d[i + 1]; // Green channel
+        cnt++;
+      }
+    }
+    return cnt > 0 ? sum / cnt : null;
+  } catch { return null; }
+}
+
+// ==================== CHART SETUP ====================
+const chartOpts = (label, color) => ({
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [{
+      label,
+      data: [],
+      borderColor: color,
+      backgroundColor: color + '22',
+      borderWidth: 2,
+      pointRadius: 0,
+      fill: true,
+      tension: 0.4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { display: false },
+      y: {
+        display: true,
+        grid: { color: '#21262D' },
+        ticks: { color: '#8B949E', font: { size: 11 } }
+      }
+    }
+  }
+});
+
+let hrChart, blinkChart;
+const hrData = [], blinkData = [], chartLabels = [];
+const MAX_CHART_POINTS = 60;
+
+function initCharts() {
+  hrChart = new Chart(document.getElementById('hr-chart'), chartOpts('BPM', '#FF5252'));
+  blinkChart = new Chart(document.getElementById('blink-chart'), chartOpts('blinks/min', '#40C4FF'));
+}
+
+function pushChart(bpm, blinkRate) {
+  const t = new Date().toLocaleTimeString('th', { hour12: false });
+  chartLabels.push(t);
+  hrData.push(bpm);
+  blinkData.push(blinkRate);
+  if (chartLabels.length > MAX_CHART_POINTS) {
+    chartLabels.shift(); hrData.shift(); blinkData.shift();
+  }
+  hrChart.data.labels = chartLabels;
+  hrChart.data.datasets[0].data = hrData;
+  blinkChart.data.labels = chartLabels;
+  blinkChart.data.datasets[0].data = blinkData;
+  hrChart.update('none');
+  blinkChart.update('none');
+}
+
+// ==================== ALERT SYSTEM ====================
+const ALERTS_TH = {
+  drowsy: ["ตื่น ๆ ทำงาน นะคะ!", "ดูเหมือนง่วงนอน ลองเดินเล่นสักครู่"],
+  stand: ["ลุก ๆ ขยับตัวบ้าง นะครับ", "นั่งนานเกินไปแล้ว ยืดเส้นยืดสายหน่อยนะ"],
+  water: ["อย่าลืมดื่มน้ำด้วยนะครับ", "ดื่มน้ำหน่อยนะ ร่างกายต้องการน้ำ"],
+  posture: ["ปรับท่านั่งให้ดีขึ้นหน่อยนะ", "นั่งตัวตรงหน่อยนะครับ"],
+  stress: ["ดูเหมือนเครียดมาก ลองหายใจลึก ๆ", "พักสักครู่นะ ผ่อนคลายสักนิด"]
+};
+
+const ICONS = { drowsy: '😴', stand: '🪑', water: '💧', posture: '🧍', stress: '🧠' };
+
+function canAlert(type) {
+  const now = Date.now();
+  if (now - COOLDOWN[type] < COOLDOWN_MS) return false;
+  COOLDOWN[type] = now;
+  return true;
+}
+
+function triggerAlert(type) {
+  if (!canAlert(type)) return;
+  const msgs = ALERTS_TH[type];
+  const msg = msgs[Math.floor(Math.random() * msgs.length)];
+  showBanner(type, msg);
+  if (OPT.voice) speak(msg);
+  addLog(type, msg);
+}
+
+function showBanner(type, msg) {
+  const banner = document.getElementById('alert-banner');
+  const div = document.createElement('div');
+  div.className = `alert-item ${type}`;
+  div.innerHTML = `<span>${ICONS[type]}</span><span>${msg}</span><span class="alert-close" onclick="this.parentElement.remove()">×</span>`;
+  banner.appendChild(div);
+  setTimeout(() => {
+    div.style.animation = 'fadeOut .3s ease forwards';
+    setTimeout(() => div.remove(), 300);
+  }, 7000);
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'th-TH';
+  u.rate = 0.92;
+  u.pitch = 1.05;
+  speechSynthesis.speak(u);
+}
+
+const logEntries = [];
+function addLog(type, msg) {
+  const t = new Date().toLocaleTimeString('th', { hour12: false });
+  logEntries.unshift({ type, msg, t });
+  if (logEntries.length > 50) logEntries.pop();
+  renderLog();
+}
+
+function renderLog() {
+  const el = document.getElementById('alert-log');
+  if (logEntries.length === 0) {
+    el.innerHTML = '<div class="log-empty">ยังไม่มีการแจ้งเตือน</div>';
+    return;
+  }
+  el.innerHTML = logEntries.slice(0, 20).map(e =>
+    `<div class="log-entry"><span class="log-time">${e.t}</span><span>${ICONS[e.type]} ${e.msg}</span></div>`
+  ).join('');
+}
+
+function clearLog() {
+  logEntries.length = 0;
+  renderLog();
+}
+
+// ==================== UI UPDATES ====================
+function updateHR(bpm) {
+  const el = document.getElementById('hr-val');
+  const sub = document.getElementById('hr-sub');
+  const bar = document.getElementById('hr-bar');
+  if (!bpm) {
+    el.innerHTML = '<span class="neutral">--</span>';
+    sub.textContent = 'กำลังวิเคราะห์ (ต้องการ ~15 วินาที)';
+    return;
+  }
+  let cls = 'good', hint = 'ปกติ';
+  if (bpm < 50) { cls = 'warn'; hint = 'ช้ากว่าปกติ'; }
+  else if (bpm > 100) { cls = 'warn'; hint = 'เร็วกว่าปกติ'; }
+  else if (bpm > 130) { cls = 'danger'; hint = 'สูงมาก'; }
+  el.innerHTML = `<span class="${cls}">${bpm}</span>`;
+  sub.textContent = `สถานะ: ${hint}`;
+  const pct = Math.min(100, Math.max(0, (bpm - 40) / 160 * 100));
+  bar.style.width = pct + '%';
+  bar.style.background = cls === 'good' ? 'var(--green)' : cls === 'warn' ? 'var(--yellow)' : 'var(--red)';
+}
+
+function updateStress(stress) {
+  const el = document.getElementById('stress-val');
+  const sub = document.getElementById('stress-sub');
+  const bar = document.getElementById('stress-bar');
+  if (!stress) {
+    el.innerHTML = '<span class="neutral">--</span>';
+    sub.textContent = 'รอข้อมูล HRV (ต้องการ ~30 วินาที)';
+    return;
+  }
+  el.innerHTML = `<span class="${stress.cls}">${stress.level}</span>`;
+  sub.textContent = stress.level === 'ต่ำ' ? 'HRV ดี — ผ่อนคลาย' : stress.level === 'ปานกลาง' ? 'HRV ปานกลาง' : 'HRV ต่ำ — อาจเครียด';
+  bar.style.width = stress.val + '%';
+  bar.style.background = stress.cls === 'good' ? 'var(--green)' : stress.cls === 'warn' ? 'var(--yellow)' : 'var(--red)';
+}
+
+function updateBlink(rate) {
+  const el = document.getElementById('blink-val');
+  let cls = 'good';
+  if (rate < 10 || rate > 30) cls = 'warn';
+  el.className = `mini-value ${cls}`;
+  el.textContent = rate;
+}
+
+function updateDrowsy(level, perclos) {
+  const el = document.getElementById('drowsy-val');
+  const sub = document.getElementById('perclos-sub');
+  const labels = { alert: 'ตื่นตัว', tired: 'เริ่มง่วง', drowsy: 'ง่วงมาก' };
+  const cls = { alert: 'good', tired: 'warn', drowsy: 'danger' };
+  el.className = `mini-value ${cls[level]}`;
+  el.textContent = labels[level] || '--';
+  sub.textContent = `PERCLOS: ${(perclos * 100).toFixed(0)}%`;
+}
+
+function updatePosture(status, issues) {
+  const el = document.getElementById('posture-val');
+  const sub = document.getElementById('posture-sub');
+  const labels = { good: 'ดี', fair: 'พอใช้', poor: 'ควรปรับ' };
+  const cls = { good: 'good', fair: 'warn', poor: 'danger' };
+  el.className = `mini-value ${cls[status] || 'neutral'}`;
+  el.textContent = labels[status] || '--';
+  sub.textContent = issues.length > 0 ? issues.join(', ') : 'ท่านั่งดี';
+}
+
+function updateEAR(ear) {
+  const el = document.getElementById('ear-val');
+  el.className = `mini-value ${ear < 0.22 ? 'warn' : 'good'}`;
+  el.textContent = ear.toFixed(3);
+}
+
+function updateSitTimer() {
+  if (!S.startTime) return;
+  const sec = Math.floor((Date.now() - S.startTime) / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  document.getElementById('sit-h').textContent = String(h).padStart(2, '0');
+  document.getElementById('sit-m').textContent = String(m).padStart(2, '0');
+  document.getElementById('sit-s').textContent = String(s).padStart(2, '0');
+
+  const totalMin = sec / 60;
+  const pct = Math.min(100, totalMin / OPT.sitLimit * 100);
+  const bar = document.getElementById('sit-bar');
+  bar.style.width = pct + '%';
+  bar.style.background = pct < 70 ? 'var(--green)' : pct < 90 ? 'var(--yellow)' : 'var(--red)';
+
+  ['sit-h', 'sit-m', 'sit-s'].forEach(id => {
+    const el = document.getElementById(id);
+    el.className = `timer-num ${pct < 70 ? 'good' : pct < 90 ? 'warn' : 'danger'}`;
+  });
+
+  if (totalMin >= OPT.sitLimit) triggerAlert('stand');
+}
+
+function updateWaterTimer() {
+  if (!S.lastWater) return;
+  const sec = Math.floor((Date.now() - S.lastWater) / 1000);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  document.getElementById('water-val').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+  const pct = Math.min(100, m / OPT.waterLimit * 100);
+  const bar = document.getElementById('water-bar');
+  bar.style.width = pct + '%';
+  bar.style.background = pct < 70 ? 'var(--blue)' : pct < 90 ? 'var(--yellow)' : 'var(--red)';
+
+  if (m >= OPT.waterLimit) triggerAlert('water');
+}
+
+function resetWater() {
+  S.lastWater = Date.now();
+  COOLDOWN.water = 0;
+  addLog('water', 'รีเซ็ตเวลาดื่มน้ำ ✓');
+}
+
+// ==================== CLOCK ====================
+function updateClock() {
+  const now = new Date();
+  document.getElementById('time-display').textContent = now.toLocaleTimeString('th', { hour12: false });
+}
+setInterval(updateClock, 1000);
+setInterval(updateSitTimer, 1000);
+setInterval(updateWaterTimer, 1000);
+
+// ==================== MEDIAPIPE ====================
+let faceMesh, camera;
+
+async function initFaceMesh() {
+  faceMesh = new FaceMesh({
+    locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${f}`
+  });
+
+  faceMesh.setOptions({
+    maxNumFaces: 1,
+    refineLandmarks: true,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+
+  faceMesh.onResults(onResults);
+}
+
+const videoEl = document.getElementById('video');
+const canvas = document.getElementById('output-canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+let chartPushTimer = 0;
+
+function onResults(results) {
+  // Draw mirrored video
+  ctx.save();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
+
+  // FPS
+  S.frameCount++;
+  const now = Date.now();
+  if (now - S.lastFpsTime >= 1000) {
+    S.fps = S.frameCount;
+    S.frameCount = 0;
+    S.lastFpsTime = now;
+    document.getElementById('fps-display').textContent = `${S.fps} FPS`;
+  }
+
+  const hasFace = results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0;
+  document.getElementById('face-badge').style.display = hasFace ? 'block' : 'none';
+  document.getElementById('noface-badge').style.display = hasFace ? 'none' : 'block';
+  S.faceDetected = hasFace;
+
+  if (!hasFace) return;
+
+  const lm = results.multiFaceLandmarks[0];
+
+  // Draw landmarks if enabled
+  if (OPT.landmarks) {
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    drawConnectors(ctx, lm, FACEMESH_TESSELATION, { color: '#00C85320', lineWidth: 1 });
+    drawConnectors(ctx, lm, FACEMESH_RIGHT_EYE, { color: '#FF525288', lineWidth: 1.5 });
+    drawConnectors(ctx, lm, FACEMESH_LEFT_EYE, { color: '#FF525288', lineWidth: 1.5 });
+    ctx.restore();
+  }
+
+  // Green channel for rPPG (mirror-compensated)
+  const mirroredCtx = getMirroredCtx(lm);
+  const green = extractGreen(canvas, ctx, mirroredCtx);
+  if (green !== null) {
+    RPPG.addSample(green);
+    if (now - RPPG.lastCalc > RPPG.calcInterval) {
+      RPPG.compute();
+      RPPG.lastCalc = now;
+    }
+  }
+
+  // EAR
+  const ear = (calcEAR(lm, R_EYE) + calcEAR(lm, L_EYE)) / 2;
+  BLINK.update(ear);
+  DROWSY.update(ear, BLINK.rate);
+  POSTURE.analyze(lm, canvas.width, canvas.height);
+
+  // Update UI
+  updateHR(RPPG.currentBPM);
+  updateStress(RPPG.getStress());
+  updateBlink(BLINK.rate);
+  updateDrowsy(DROWSY.level, DROWSY.perclos || 0);
+  updatePosture(POSTURE.status, POSTURE.issues);
+  updateEAR(ear);
+
+  // Check alerts
+  if (OPT.drowsy && DROWSY.level === 'drowsy') triggerAlert('drowsy');
+  if (OPT.posture && POSTURE.status === 'poor') triggerAlert('posture');
+  const stress = RPPG.getStress();
+  if (stress && stress.level === 'สูง') triggerAlert('stress');
+
+  // Push charts every 30s
+  if (now - chartPushTimer > 30000) {
+    chartPushTimer = now;
+    if (RPPG.currentBPM) pushChart(RPPG.currentBPM, BLINK.rate);
+  }
+}
+
+function getMirroredCtx(lm) {
+  // Mirror landmarks x-axis (since we mirror the video)
+  return lm.map(l => ({ ...l, x: 1 - l.x }));
+}
+
+// ==================== CAMERA ====================
+async function startCamera() {
+  document.getElementById('loading-overlay').style.display = 'flex';
+
+  try {
+    await initFaceMesh();
+
+    camera = new Camera(videoEl, {
+      onFrame: async () => {
+        await faceMesh.send({ image: videoEl });
+      },
+      width: 640,
+      height: 480
+    });
+
+    await camera.start();
+
+    S.running = true;
+    S.startTime = Date.now();
+    S.lastWater = Date.now();
+    S.lastStand = Date.now();
+
+    document.getElementById('loading-overlay').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('status-dot').className = 'running';
+    document.getElementById('status-text').textContent = 'กำลังทำงาน';
+    document.getElementById('main-btn').textContent = 'หยุดใช้งาน';
+    document.getElementById('main-btn').className = 'nav-btn danger';
+    document.getElementById('sit-limit-disp').textContent = OPT.sitLimit;
+
+    speak('เริ่มการตรวจสอบสุขภาพแล้วนะครับ');
+
+  } catch (e) {
+    document.getElementById('loading-overlay').style.display = 'none';
+    alert('ไม่สามารถเปิดกล้องได้: ' + e.message);
+  }
+}
+
+function stopCamera() {
+  if (camera) { camera.stop(); camera = null; }
+  if (faceMesh) { faceMesh.close(); faceMesh = null; }
+  S.running = false;
+
+  document.getElementById('status-dot').className = '';
+  document.getElementById('status-text').textContent = 'หยุดทำงาน';
+  document.getElementById('main-btn').textContent = 'เริ่มใช้งาน';
+  document.getElementById('main-btn').className = 'nav-btn primary';
+  speak('หยุดการตรวจสอบสุขภาพแล้วครับ');
+}
+
+function toggleCamera() {
+  if (S.running) stopCamera();
+  else startCamera();
+}
+
+// ==================== SETTINGS ====================
+function toggleSettings() {
+  const p = document.getElementById('settings-panel');
+  p.style.display = p.style.display === 'none' ? 'block' : 'none';
+  readSettings();
+}
+
+function readSettings() {
+  OPT.sitLimit = parseInt(document.getElementById('sit-limit').value) || 45;
+  OPT.waterLimit = parseInt(document.getElementById('water-limit').value) || 30;
+  document.getElementById('sit-limit-disp').textContent = OPT.sitLimit;
+}
+
+function toggleOpt(key) {
+  OPT[key] = !OPT[key];
+  const el = document.getElementById(`toggle-${key}`);
+  el.className = `setting-toggle ${OPT[key] ? 'on' : ''}`;
+}
+
+document.getElementById('sit-limit').addEventListener('change', readSettings);
+document.getElementById('water-limit').addEventListener('change', readSettings);
+
+// ==================== INIT ====================
+initCharts();
+</script>
+</body>
+</html>
