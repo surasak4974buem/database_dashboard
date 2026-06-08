@@ -4,9 +4,11 @@
 สร้าง Word (.docx) และ PDF พร้อมกัน
 ฟอนต์ TH Sarabun New ขนาดตามมาตรฐาน HA / ISO 13485
 กระดาษ A4 จัดหน้าสวยงาม มีรูปประกอบ
+Auto-push ไป GitHub ทุกครั้ง พร้อมระบบ versioning อัตโนมัติ
 """
 
-import io, os, sys, urllib.request
+import io, os, sys, subprocess, urllib.request
+from datetime import datetime
 from pathlib import Path
 
 # ─── paths ────────────────────────────────────────────────────────────────────
@@ -16,8 +18,24 @@ FONTS.mkdir(parents=True, exist_ok=True)
 IMGS   = BASE / "assets"
 IMGS.mkdir(parents=True, exist_ok=True)
 
-WORD_OUT = BASE / "คู่มือตรวจเช็คงานซ่อมเครื่องมือแพทย์.docx"
-PDF_OUT  = BASE / "คู่มือตรวจเช็คงานซ่อมเครื่องมือแพทย์.pdf"
+BASENAME = "คู่มือตรวจเช็คงานซ่อมเครื่องมือแพทย์"
+
+# ─── auto-versioning: ตรวจไฟล์ที่มีอยู่แล้ว เพิ่ม _vN ────────────────────────
+def versioned(base: Path, suffix: str) -> Path:
+    candidate = base.parent / f"{base.name}{suffix}"
+    if not candidate.exists():
+        return candidate
+    v = 2
+    while True:
+        candidate = base.parent / f"{base.name}_v{v}{suffix}"
+        if not candidate.exists():
+            return candidate
+        v += 1
+
+WORD_OUT = versioned(BASE / BASENAME, ".docx")
+PDF_OUT  = versioned(BASE / BASENAME, ".pdf")
+print(f"Word → {WORD_OUT.name}")
+print(f"PDF  → {PDF_OUT.name}")
 
 # ─── download Sarabun fonts ────────────────────────────────────────────────────
 FONT_URLS = {
@@ -878,3 +896,53 @@ pdf_doc = SimpleDocTemplate(str(PDF_OUT), pagesize=A4,
 pdf_doc.build(story)
 print(f"PDF saved: {PDF_OUT}")
 print("\nเสร็จสมบูรณ์ทั้ง 2 ไฟล์!")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# STEP 4 — Auto git commit + push ไป GitHub
+# ══════════════════════════════════════════════════════════════════════════════
+def run(cmd, cwd=BASE):
+    r = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"  [warn] {' '.join(cmd)}: {r.stderr.strip()}")
+    return r.returncode == 0
+
+print("\nกำลัง push ไป GitHub...")
+branch = subprocess.run(
+    ["git","rev-parse","--abbrev-ref","HEAD"],
+    cwd=str(BASE), capture_output=True, text=True
+).stdout.strip() or "claude/medical-equipment-checklist-86kzld"
+
+now    = datetime.now().strftime("%Y-%m-%d %H:%M")
+wname  = WORD_OUT.name
+pname  = PDF_OUT.name
+
+run(["git","add", wname, pname])
+
+msg = (
+    f"เพิ่มเอกสาร {wname} และ {pname}\n\n"
+    f"สร้างอัตโนมัติโดย build_manual.py — {now}\n"
+    f"ฟอนต์ TH Sarabun New มาตรฐาน HA/ISO กระดาษ A4"
+)
+commit_ok = run(["git","commit","-m", msg])
+
+if commit_ok:
+    pushed = False
+    delays = [2, 4, 8, 16]
+    for attempt, delay in enumerate([0]+delays, 1):
+        if attempt > 1:
+            import time; time.sleep(delay)
+            print(f"  retry {attempt}/5...")
+        r = subprocess.run(
+            ["git","push","-u","origin", branch],
+            cwd=str(BASE), capture_output=True, text=True
+        )
+        if r.returncode == 0:
+            pushed = True
+            break
+    if pushed:
+        print(f"  GitHub push สำเร็จ → branch: {branch}")
+        print(f"  ไฟล์ที่ push: {wname}, {pname}")
+    else:
+        print("  [error] push ไม่สำเร็จ กรุณา push ด้วยตนเอง")
+else:
+    print("  ไม่มีการเปลี่ยนแปลง (ไฟล์อาจซ้ำกัน) — ข้าม push")
